@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SME Receipt Generator</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #3498db;
+            --secondary-color: #2980b9;
+            --danger-color: #e74c3c;
+            --success-color: #2ecc71;
+            --light-color: #ecf0f1;
+            --dark-color: #2c3e50;
+            --gray-color: #95a5a6;
+            --border-color: #bdc3c7;
+            --receipt-bg: #fff;
+            --receipt-border: #ddd;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        h1, h2, h3 {
+            color: var(--dark-color);
+            margin-bottom: 15px;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: var(--primary-color);
+        }
+
+        .app-container {
+            display: flex;
+            gap: 30px;
+            flex-wrap: wrap;
+        }
+
+        .form-section, .receipt-section {
+            flex: 1;
+            min-width: 300px;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 15px;
+        }
+
+        .form-row .form-group {
+            flex: 1;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: var(--dark-color);
+        }
+
+        input, textarea, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 16px;
+        }
+
+        textarea {
+            min-height: 60px;
+            resize: vertical;
+        }
+
+        .btn {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--secondary-color);
+        }
+
+        .btn-danger {
+            background-color: var(--danger-color);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background-color: #c0392b;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        /* Items section */
+        .items-container {
+            margin-bottom: 20px;
+        }
+
+        .item-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+
+        .item-row input {
+            margin-bottom: 0;
+        }
+
+        .item-name {
+            flex: 3;
+        }
+
+        .item-qty {
+            flex: 1;
+        }
+
+        .item-price {
+            flex: 2;
+        }
+
+        .item-total {
+            flex: 2;
+            text-align: right;
+            padding: 0 10px;
+            font-weight: 600;
+        }
+
+        .remove-item {
+            background-color: transparent;
+            color: var(--danger-color);
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            padding: 5px;
+        }
+
+        .remove-item:hover {
+            color: #c0392b;
+        }
+
+        /* Totals section */
+        .totals-section {
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 20px;
+        }
+
+        /* Receipt paper styling */
+        .receipt-paper {
+            background-color: var(--receipt-bg);
+            border: 1px solid var(--receipt-border);
+            padding: 20px;
+            margin-top: 20px;
+            font-family: 'Courier New', Courier, monospace;
+            max-width: 100%;
+            overflow: hidden;
+        }
+
+        .receipt-header {
+            text-align: center;
+            margin-bottom: 15px;
+            border-bottom: 1px dashed var(--receipt-border);
+            padding-bottom: 15px;
+        }
+
+        .receipt-header h2 {
+            font-size: 24px;
+            margin-bottom: 5px;
+            color: #000;
+        }
+
+        .receipt-meta, .customer-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .receipt-items {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+
+        .receipt-items th {
+            text-align: left;
+            border-bottom: 1px solid var(--receipt-border);
+            padding: 5px 0;
+        }
+
+        .receipt-items td {
+            padding: 5px 0;
+            border-bottom: 1px dashed #eee;
+        }
+
+        .receipt-items tr:last-child td {
+            border-bottom: none;
+        }
+
+        .receipt-totals {
+            margin-top: 15px;
+            border-top: 1px dashed var(--receipt-border);
+            padding-top: 10px;
+        }
+
+        .receipt-total-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+
+        .receipt-total-row.total {
+            font-weight: bold;
+            font-size: 18px;
+            margin-top: 10px;
+        }
+
+        .receipt-notes {
+            margin-top: 15px;
+            font-style: italic;
+            font-size: 14px;
+        }
+
+        .receipt-actions {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            .receipt-paper, .receipt-paper * {
+                visibility: visible;
+            }
+            .receipt-paper {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                border: none;
+                box-shadow: none;
+            }
+            .receipt-actions {
+                display: none;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .app-container {
+                flex-direction: column;
+            }
+            
+            .form-row {
+                flex-direction: column;
+                gap: 0;
+            }
+        }
+
+        /* Loading spinner for PDF generation */
+        .spinner {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .spinner-content {
+            background-color: white;
+            padding: 20px;
+            border-radius: 5px;
+            text-align: center;
+        }
+
+        .spinner-icon {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #3498db;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="spinner" id="spinner">
+        <div class="spinner-content">
+            <div class="spinner-icon"></div>
+            <p>Generating PDF, please wait...</p>
+        </div>
+    </div>
+
+    <div class="container">
+        <h1>SME Receipt Generator</h1>
+        
+        <div class="app-container">
+            <div class="form-section">
+                <h2>Receipt Details</h2>
+                
+                <div class="form-group">
+                    <label for="business-name">Your Business Name:</label>
+                    <input type="text" id="business-name" placeholder="ABC Enterprises">
+                </div>
+                
+                <div class="form-group">
+                    <label for="business-address">Business Address:</label>
+                    <textarea id="business-address" placeholder="123 Main St, City"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="business-contact">Contact Info:</label>
+                    <input type="text" id="business-contact" placeholder="Phone: 123-456-7890">
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="receipt-number">Receipt No:</label>
+                        <input type="text" id="receipt-number" placeholder="REC-001">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="receipt-date">Date:</label>
+                        <input type="date" id="receipt-date">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="customer-name">Customer Name:</label>
+                    <input type="text" id="customer-name" placeholder="John Doe">
+                </div>
+                
+                <div class="form-group">
+                    <label for="customer-contact">Customer Contact:</label>
+                    <input type="text" id="customer-contact" placeholder="Phone/Email">
+                </div>
+                
+                <h3>Items</h3>
+                <div class="items-container">
+                    <div class="item-row">
+                        <input type="text" class="item-name" placeholder="Item name">
+                        <input type="number" class="item-qty" placeholder="Qty" min="1" value="1">
+                        <input type="number" class="item-price" placeholder="Price" min="0" step="0.01">
+                        <span class="item-total">0.00</span>
+                        <button class="remove-item"><i class="fas fa-trash"></i></button>
+                    </div>
+                </div>
+                
+                <button id="add-item" class="btn"><i class="fas fa-plus"></i> Add Item</button>
+                
+                <div class="totals-section">
+                    <div class="form-group">
+                        <label for="subtotal">Subtotal:</label>
+                        <input type="text" id="subtotal" readonly value="0.00">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="tax-rate">Tax Rate (%):</label>
+                        <input type="number" id="tax-rate" min="0" max="100" value="10">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="tax-amount">Tax Amount:</label>
+                        <input type="text" id="tax-amount" readonly value="0.00">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="discount">Discount:</label>
+                        <input type="number" id="discount" min="0" step="0.01" value="0">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="total-amount">Total Amount:</label>
+                        <input type="text" id="total-amount" readonly value="0.00">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="payment-method">Payment Method:</label>
+                        <select id="payment-method">
+                            <option value="Cash">Cash</option>
+                            <option value="Credit Card">Credit Card</option>
+                            <option value="Bank Transfer">Bank Transfer</option>
+                            <option value="Mobile Payment">Mobile Payment</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="notes">Notes:</label>
+                        <textarea id="notes" placeholder="Additional information"></textarea>
+                    </div>
+                </div>
+                
+                <div class="action-buttons">
+                    <button id="generate-receipt" class="btn btn-primary"><i class="fas fa-receipt"></i> Generate Receipt</button>
+                    <button id="save-receipt" class="btn"><i class="fas fa-save"></i> Save</button>
+                    <button id="clear-form" class="btn btn-danger"><i class="fas fa-trash"></i> Clear</button>
+                </div>
+            </div>
+            
+            <div class="receipt-section">
+                <h2>Receipt Preview</h2>
+                <div class="receipt-paper" id="receipt-paper">
+                    <div class="receipt-header">
+                        <h2 id="receipt-business-name">Your Business Name</h2>
+                        <p id="receipt-business-address">123 Main St, City</p>
+                        <p id="receipt-business-contact">Phone: 123-456-7890</p>
+                    </div>
+                    
+                    <div class="receipt-meta">
+                        <div>
+                            <strong>Receipt No:</strong> <span id="receipt-number-display">REC-001</span>
+                        </div>
+                        <div>
+                            <strong>Date:</strong> <span id="receipt-date-display">2023-01-01</span>
+                        </div>
+                    </div>
+                    
+                    <div class="customer-info">
+                        <div>
+                            <strong>Customer:</strong> <span id="receipt-customer-name">John Doe</span>
+                        </div>
+                        <div>
+                            <strong>Contact:</strong> <span id="receipt-customer-contact">Phone/Email</span>
+                        </div>
+                    </div>
+                    
+                    <table class="receipt-items">
+                        <thead>
+                            <tr>
+                                <th>Item</th>
+                                <th>Qty</th>
+                                <th>Price</th>
+                                <th>Total</th>
+                            </tr>
+                        </thead>
+                        <tbody id="receipt-items-body">
+                            <!-- Items will be added here -->
+                        </tbody>
+                    </table>
+                    
+                    <div class="receipt-totals">
+                        <div class="receipt-total-row">
+                            <span>Subtotal:</span>
+                            <span id="receipt-subtotal">0.00</span>
+                        </div>
+                        <div class="receipt-total-row">
+                            <span>Tax (<span id="receipt-tax-rate">10</span>%):</span>
+                            <span id="receipt-tax-amount">0.00</span>
+                        </div>
+                        <div class="receipt-total-row">
+                            <span>Discount:</span>
+                            <span id="receipt-discount">0.00</span>
+                        </div>
+                        <div class="receipt-total-row total">
+                            <span>Total:</span>
+                            <span id="receipt-total">0.00</span>
+                        </div>
+                        <div class="receipt-total-row">
+                            <span>Payment Method:</span>
+                            <span id="receipt-payment-method">Cash</span>
+                        </div>
+                    </div>
+                    
+                    <div class="receipt-notes">
+                        <p id="receipt-notes">Thank you for your business!</p>
+                    </div>
+                    
+                    <div class="receipt-footer">
+                        <p>This is an official receipt</p>
+                    </div>
+                </div>
+                
+                <div class="receipt-actions">
+                    <button id="print-receipt" class="btn"><i class="fas fa-print"></i> Print Receipt</button>
+                    <button id="download-receipt" class="btn"><i class="fas fa-download"></i> Download as PDF</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize jsPDF
+        const { jsPDF } = window.jspdf;
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize date field with today's date
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('receipt-date').value = today;
+            
+            // Load saved business info if available
+            loadBusinessInfo();
+            
+            // Add item button
+            document.getElementById('add-item').addEventListener('click', addNewItemRow);
+            
+            // Generate receipt button
+            document.getElementById('generate-receipt').addEventListener('click', generateReceipt);
+            
+            // Print receipt button
+            document.getElementById('print-receipt').addEventListener('click', printReceipt);
+            
+            // Save receipt button
+            document.getElementById('save-receipt').addEventListener('click', saveBusinessInfo);
+            
+            // Clear form button
+            document.getElementById('clear-form').addEventListener('click', clearForm);
+            
+            // Download as PDF button
+            document.getElementById('download-receipt').addEventListener('click', generatePDF);
+            
+            // Add event listeners for dynamic item rows
+            document.querySelector('.items-container').addEventListener('input', function(e) {
+                if (e.target.classList.contains('item-qty') || e.target.classList.contains('item-price')) {
+                    calculateItemTotal(e.target.closest('.item-row'));
+                }
+                calculateTotals();
+            });
+            
+            // Add event listeners for tax and discount
+            document.getElementById('tax-rate').addEventListener('input', calculateTotals);
+            document.getElementById('discount').addEventListener('input', calculateTotals);
+            
+            // Add initial item row
+            addNewItemRow();
+        });
+
+        function addNewItemRow() {
+            const itemsContainer = document.querySelector('.items-container');
+            const newItemRow = document.createElement('div');
+            newItemRow.className = 'item-row';
+            newItemRow.innerHTML = `
+                <input type="text" class="item-name" placeholder="Item name">
+                <input type="number" class="item-qty" placeholder="Qty" min="1" value="1">
+                <input type="number" class="item-price" placeholder="Price" min="0" step="0.01">
+                <span class="item-total">0.00</span>
+                <button class="remove-item"><i class="fas fa-trash"></i></button>
+            `;
+            itemsContainer.appendChild(newItemRow);
+            
+            // Add event listener to remove button
+            newItemRow.querySelector('.remove-item').addEventListener('click', function() {
+                itemsContainer.removeChild(newItemRow);
+                calculateTotals();
+            });
+            
+            // Focus on the new item name field
+            newItemRow.querySelector('.item-name').focus();
+        }
+
+        function calculateItemTotal(itemRow) {
+            const qty = parseFloat(itemRow.querySelector('.item-qty').value) || 0;
+            const price = parseFloat(itemRow.querySelector('.item-price').value) || 0;
+            const total = qty * price;
+            itemRow.querySelector('.item-total').textContent = total.toFixed(2);
+        }
+
+        function calculateTotals() {
+            let subtotal = 0;
+            
+            document.querySelectorAll('.item-row').forEach(row => {
+                const total = parseFloat(row.querySelector('.item-total').textContent) || 0;
+                subtotal += total;
+            });
+            
+            const taxRate = parseFloat(document.getElementById('tax-rate').value) || 0;
+            const discount = parseFloat(document.getElementById('discount').value) || 0;
+            const taxAmount = subtotal * (taxRate / 100);
+            const total = subtotal + taxAmount - discount;
+            
+            document.getElementById('subtotal').value = subtotal.toFixed(2);
+            document.getElementById('tax-amount').value = taxAmount.toFixed(2);
+            document.getElementById('total-amount').value = total.toFixed(2);
+        }
+
+        function generateReceipt() {
+            // Business info
+            document.getElementById('receipt-business-name').textContent = 
+                document.getElementById('business-name').value || 'Your Business Name';
+            document.getElementById('receipt-business-address').textContent = 
+                document.getElementById('business-address').value || '123 Main St, City';
+            document.getElementById('receipt-business-contact').textContent = 
+                document.getElementById('business-contact').value || 'Phone: 123-456-7890';
+            
+            // Receipt meta
+            document.getElementById('receipt-number-display').textContent = 
+                document.getElementById('receipt-number').value || 'REC-001';
+            document.getElementById('receipt-date-display').textContent = 
+                document.getElementById('receipt-date').value || new Date().toISOString().split('T')[0];
+            
+            // Customer info
+            document.getElementById('receipt-customer-name').textContent = 
+                document.getElementById('customer-name').value || 'Walk-in Customer';
+            document.getElementById('receipt-customer-contact').textContent = 
+                document.getElementById('customer-contact').value || 'N/A';
+            
+            // Items
+            const receiptItemsBody = document.getElementById('receipt-items-body');
+            receiptItemsBody.innerHTML = '';
+            
+            document.querySelectorAll('.item-row').forEach(row => {
+                const name = row.querySelector('.item-name').value || 'Item';
+                const qty = row.querySelector('.item-qty').value || '1';
+                const price = parseFloat(row.querySelector('.item-price').value) || 0;
+                const total = parseFloat(row.querySelector('.item-total').textContent) || 0;
+                
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${name}</td>
+                    <td>${qty}</td>
+                    <td>${price.toFixed(2)}</td>
+                    <td>${total.toFixed(2)}</td>
+                `;
+                receiptItemsBody.appendChild(tr);
+            });
+            
+            // Totals
+            const subtotal = parseFloat(document.getElementById('subtotal').value) || 0;
+            const taxRate = parseFloat(document.getElementById('tax-rate').value) || 0;
+            const taxAmount = parseFloat(document.getElementById('tax-amount').value) || 0;
+            const discount = parseFloat(document.getElementById('discount').value) || 0;
+            const total = parseFloat(document.getElementById('total-amount').value) || 0;
+            const paymentMethod = document.getElementById('payment-method').value;
+            const notes = document.getElementById('notes').value || 'Thank you for your business!';
+            
+            document.getElementById('receipt-subtotal').textContent = subtotal.toFixed(2);
+            document.getElementById('receipt-tax-rate').textContent = taxRate;
+            document.getElementById('receipt-tax-amount').textContent = taxAmount.toFixed(2);
+            document.getElementById('receipt-discount').textContent = discount.toFixed(2);
+            document.getElementById('receipt-total').textContent = total.toFixed(2);
+            document.getElementById('receipt-payment-method').textContent = paymentMethod;
+            document.getElementById('receipt-notes').textContent = notes;
+        }
+
+        function printReceipt() {
+            window.print();
+        }
+
+        function saveBusinessInfo() {
+            const businessInfo = {
+                name: document.getElementById('business-name').value,
+                address: document.getElementById('business-address').value,
+                contact: document.getElementById('business-contact').value
+            };
+            
+            localStorage.setItem('smeReceiptBusinessInfo', JSON.stringify(businessInfo));
+            alert('Business information saved!');
+        }
+
+        function loadBusinessInfo() {
+            const savedInfo = localStorage.getItem('smeReceiptBusinessInfo');
+            if (savedInfo) {
+                const businessInfo = JSON.parse(savedInfo);
+                document.getElementById('business-name').value = businessInfo.name || '';
+                document.getElementById('business-address').value = businessInfo.address || '';
+                document.getElementById('business-contact').value = businessInfo.contact || '';
+            }
+        }
+
+        function clearForm() {
+            if (confirm('Are you sure you want to clear the form? All unsaved data will be lost.')) {
+                // Clear all fields except business info
+                document.getElementById('receipt-number').value = '';
+                document.getElementById('receipt-date').value = new Date().toISOString().split('T')[0];
+                document.getElementById('customer-name').value = '';
+                document.getElementById('customer-contact').value = '';
+                
+                // Clear items
+                const itemsContainer = document.querySelector('.items-container');
+                itemsContainer.innerHTML = '';
+                addNewItemRow(); // Add one empty row back
+                
+                // Clear totals
+                document.getElementById('tax-rate').value = '10';
+                document.getElementById('discount').value = '0';
+                document.getElementById('notes').value = '';
+                
+                calculateTotals();
+            }
+        }
+
+        function generatePDF() {
+            // Show loading spinner
+            document.getElementById('spinner').style.display = 'flex';
+            
+            // Generate the receipt first to ensure it's up to date
+            generateReceipt();
+            
+            // Get the receipt element
+            const receipt = document.getElementById('receipt-paper');
+            
+            // Use html2canvas to capture the receipt as an image
+            html2canvas(receipt, {
+                scale: 2, // Higher quality
+                logging: false,
+                useCORS: true,
+                allowTaint: true
+            }).then(canvas => {
+                // Create a new jsPDF instance
+                const pdf = new jsPDF({
+                    orientation: 'portrait',
+                    unit: 'mm'
+                });
+                
+                // Calculate the PDF dimensions to maintain aspect ratio
+                const imgData = canvas.toDataURL('image/png');
+                const pdfWidth = pdf.internal.pageSize.getWidth();
+                const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+                
+                // Add the image to the PDF
+                pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+                
+                // Generate a filename with business name and receipt number
+                const businessName = document.getElementById('business-name').value || 'receipt';
+                const receiptNumber = document.getElementById('receipt-number').value || '000';
+                const filename = `${businessName.replace(/\s+/g, '_')}_${receiptNumber}.pdf`;
+                
+                // Save the PDF
+                pdf.save(filename);
+                
+                // Hide loading spinner
+                document.getElementById('spinner').style.display = 'none';
+            }).catch(error => {
+                console.error('Error generating PDF:', error);
+                alert('Error generating PDF. Please try again.');
+                document.getElementById('spinner').style.display = 'none';
+            });
+        }
+    </script>
+</body>
+</html>

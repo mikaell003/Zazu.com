@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>AI Style Transfer — TFJS / ml5 Integration</title>
+  <style>
+    :root{--bg:#0f1724;--card:#0b1220;--muted:#a5b4c4;--accent:#7c3aed}
+    *{box-sizing:border-box}
+    body{font-family:Inter,ui-sans-serif,system-ui,Segoe UI,Roboto,'Helvetica Neue',Arial;background:linear-gradient(180deg,#071029 0%, #071430 60%);color:#e6eef8;margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:28px}
+    .app{width:980px;max-width:100%;background:radial-gradient(ellipse at top left, rgba(255,255,255,0.02), transparent), var(--card);border-radius:14px;padding:20px;box-shadow:0 10px 30px rgba(2,6,23,0.7)}
+    header{display:flex;align-items:center;gap:16px;margin-bottom:12px}
+    header h1{font-size:20px;margin:0}
+    .grid{display:grid;grid-template-columns:360px 1fr;gap:18px}
+    .panel{background:rgba(255,255,255,0.02);padding:12px;border-radius:10px}
+    .upload-area{border:2px dashed rgba(255,255,255,0.04);padding:12px;border-radius:8px;min-height:180px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
+    .thumb{max-width:100%;max-height:240px;border-radius:8px;box-shadow:0 6px 20px rgba(2,6,23,0.6)}
+    .controls{display:flex;flex-direction:column;gap:10px}
+    .btn{background:linear-gradient(90deg,var(--accent),#4c1d95);border:none;color:white;padding:10px 14px;border-radius:8px;cursor:pointer;font-weight:600}
+    .small{padding:8px 10px;font-size:13px}
+    .preset-list{display:flex;gap:8px;flex-wrap:wrap}
+    .preset{background:rgba(255,255,255,0.02);padding:8px;border-radius:8px;cursor:pointer;border:1px solid transparent}
+    .preset.selected{border-color:rgba(255,255,255,0.06);box-shadow:inset 0 -2px 6px rgba(0,0,0,0.6)}
+    .canvas-wrap{display:flex;flex-direction:column;gap:10px}
+    footer{margin-top:12px;color:var(--muted);font-size:13px}
+    .rows{display:flex;gap:8px;align-items:center}
+    label{font-size:13px;color:var(--muted)}
+    input[type=range]{width:100%}
+    .muted{color:var(--muted);font-size:13px}
+    .note{font-size:12px;color:#9fb0d1}
+    .loader{display:inline-block;padding:6px 10px;border-radius:8px;background:rgba(255,255,255,0.03);font-size:13px}
+  </style>
+</head>
+<body>
+  <div class="app" role="application">
+    <header>
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" aria-hidden>
+        <rect x="1" y="1" width="22" height="22" rx="6" fill="#111827"></rect>
+        <path d="M7 16c1-2 4-7 10-8" stroke="#7c3aed" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <div>
+        <h1>AI Style Transfer — TFJS (ml5) Integrated</h1>
+        <div class="muted">Now uses ml5.js (TensorFlow.js under the hood) for browser-based neural style transfer. Models are loaded from CDN-hosted checkpoints.</div>
+      </div>
+    </header>
+
+    <div class="grid">
+      <div class="panel">
+        <div class="upload-area" id="uploadArea">
+          <input id="fileInput" type="file" accept="image/*" style="display:none" />
+          <div id="dropHint">Drop a photo here or <button class="btn small" id="chooseBtn">Choose file</button></div>
+          <img id="preview" class="thumb" alt="Preview" style="display:none"/>
+        </div>
+
+        <div style="margin-top:12px" class="controls">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div class="rows">
+              <label for="presetSelect">Presets</label>
+              <div style="width:8px"></div>
+              <div class="preset-list" id="presets">
+                <div class="preset selected" data-preset="vangogh">Van Gogh</div>
+                <div class="preset" data-preset="picasso">Picasso</div>
+                <div class="preset" data-preset="cartoon">Cartoon</div>
+              </div>
+            </div>
+            <div class="note">Model status: <span id="modelStatus">not loaded</span></div>
+          </div>
+
+          <div class="rows">
+            <button class="btn" id="applyBtn">Apply Style</button>
+            <button class="btn small" id="downloadBtn">Download Result</button>
+          </div>
+
+          <div>
+            <label>Strength: <span id="strengthVal">0.8</span></label>
+            <input type="range" id="strength" min="0" max="1" step="0.01" value="0.8">
+          </div>
+
+          <div class="note">This demo loads lightweight style checkpoints in-browser. First-time load may take a few seconds depending on your network.</div>
+        </div>
+      </div>
+
+      <div class="panel canvas-wrap">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <strong>Result</strong>
+            <div class="muted">Preview and tweak your stylized image</div>
+          </div>
+          <div class="muted">Status: <span id="status">idle</span></div>
+        </div>
+
+        <canvas id="canvas" width="800" height="600" style="width:100%;border-radius:8px;background:#0b1220"></canvas>
+        <div class="muted">Tip: use high-resolution photos for better results.</div>
+      </div>
+    </div>
+
+    <footer>
+      Built with HTML/CSS/JS + ml5.js (which uses TensorFlow.js). You can replace the model URLs with other checkpoints or host them locally.
+    </footer>
+  </div>
+
+  <!-- Load TensorFlow.js + ml5 -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.15.0/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/ml5@0.12.2/dist/ml5.min.js"></script>
+
+  <script>
+    // --- Elements ---
+    const fileInput = document.getElementById('fileInput');
+    const chooseBtn = document.getElementById('chooseBtn');
+    const uploadArea = document.getElementById('uploadArea');
+    const preview = document.getElementById('preview');
+    const presets = document.getElementById('presets');
+    const applyBtn = document.getElementById('applyBtn');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const status = document.getElementById('status');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const strengthSlider = document.getElementById('strength');
+    const strengthVal = document.getElementById('strengthVal');
+    const modelStatus = document.getElementById('modelStatus');
+
+    let selectedPreset = 'vangogh';
+    let originalImage = new Image();
+    let styleTransferModels = {}; // will hold ml5 styleTransfer instances per preset
+
+    // Map presets to ml5-hosted checkpoints (replace with your own hosted model if you prefer)
+    const MODEL_URLS = {
+      vangogh: 'https://storage.googleapis.com/ml5js-models/style-transfer/udnie',
+      picasso: 'https://storage.googleapis.com/ml5js-models/style-transfer/la_muse'
+      // note: these are example hosted checkpoints that ml5 demos historically used. You can host your own.
+    };
+
+    // --- Preset selection ---
+    presets.addEventListener('click', e=>{
+      const p = e.target.closest('.preset');
+      if(!p) return;
+      Array.from(presets.children).forEach(el=>el.classList.remove('selected'));
+      p.classList.add('selected');
+      selectedPreset = p.dataset.preset;
+    });
+
+    chooseBtn.addEventListener('click', ()=> fileInput.click());
+    fileInput.addEventListener('change', handleFiles);
+
+    uploadArea.addEventListener('dragover', e=>{e.preventDefault(); uploadArea.style.borderColor='#2b6cb0'});
+    uploadArea.addEventListener('dragleave', e=>{uploadArea.style.borderColor='transparent'});
+    uploadArea.addEventListener('drop', e=>{e.preventDefault(); uploadArea.style.borderColor='transparent'; const f = e.dataTransfer.files[0]; if(f) loadFile(f)});
+
+    function handleFiles(e){ const f = e.target.files[0]; if(f) loadFile(f); }
+
+    function loadFile(file){
+      const reader = new FileReader();
+      reader.onload = (ev)=>{
+        preview.src = ev.target.result; preview.style.display='block';
+        originalImage.src = ev.target.result;
+        originalImage.crossOrigin = 'anonymous';
+        originalImage.onload = ()=>{
+          drawToCanvas(originalImage);
+          status.innerText = 'image loaded';
+        }
+      }
+      reader.readAsDataURL(file);
+    }
+
+    function drawToCanvas(img){
+      const maxW = 1200; const ratio = img.width / img.height;
+      const w = Math.min(maxW, img.width);
+      const h = Math.round(w / ratio);
+      canvas.width = w; canvas.height = h;
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      ctx.drawImage(img,0,0,w,h);
+    }
+
+    strengthSlider.addEventListener('input', ()=>{strengthVal.innerText = strengthSlider.value});
+
+    applyBtn.addEventListener('click', async ()=>{
+      if(!originalImage.src){ alert('Please upload an image first.'); return; }
+      status.innerText = 'processing...';
+
+      if(selectedPreset === 'cartoon'){
+        // keep the fast canvas cartoon effect
+        await applyCartoonify();
+        status.innerText = 'done';
+        return;
+      }
+
+      // Ensure the model for the selected preset is loaded
+      await ensureModelLoaded(selectedPreset);
+
+      // Use the ml5 styleTransfer model to stylize the canvas image
+      const model = styleTransferModels[selectedPreset];
+      if(!model){ alert('Style model failed to load — see console.'); status.innerText = 'error'; return; }
+
+      // Provide a temporary low-resolution thumbnail to speed up inference when strength < 1
+      const strength = parseFloat(strengthSlider.value);
+      // ml5.styleTransfer.transfer accepts an HTMLImageElement, HTMLCanvasElement, or video element
+      try{
+        // draw original into a temporary canvas scaled by strength (to simulate strength effect)
+        const tempCanvas = document.createElement('canvas');
+        const scale = strength < 0.5 ? 0.6 : 1.0; // small heuristic to speed up
+        tempCanvas.width = Math.round(canvas.width * scale);
+        tempCanvas.height = Math.round(canvas.height * scale);
+        const tctx = tempCanvas.getContext('2d');
+        tctx.drawImage(originalImage, 0, 0, tempCanvas.width, tempCanvas.height);
+
+        // transfer returns a base64 image in the callback result.img (older ml5) or result (newer)
+        model.transfer(tempCanvas, (err, result) => {
+          if(err){ console.error(err); status.innerText = 'error'; return; }
+          // result can be {src: 'data:...'} or an HTMLImageElement depending on ml5 version
+          let outSrc = null;
+          if(result && result.src) outSrc = result.src;
+          else if(result && result instanceof HTMLImageElement) outSrc = result.src;
+          else if(result && result.image) outSrc = result.image.src;
+
+          if(!outSrc){ console.error('Unknown result from styleTransfer', result); status.innerText = 'error'; return; }
+
+          // draw styled image back to main canvas, scaled to full resolution
+          const styledImg = new Image();
+          styledImg.onload = ()=>{
+            // if we used a scale < 1 for speed, draw it stretched to full canvas
+            ctx.clearRect(0,0,canvas.width,canvas.height);
+            ctx.drawImage(styledImg, 0, 0, canvas.width, canvas.height);
+            status.innerText = 'done';
+          };
+          styledImg.src = outSrc;
+        });
+      }catch(err){ console.error(err); status.innerText = 'error'; }
+
+    });
+
+    downloadBtn.addEventListener('click', ()=>{
+      const link = document.createElement('a');
+      link.download = 'stylized-image.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    });
+
+    // --- ensure model loaded ---
+    async function ensureModelLoaded(preset){
+      if(preset === 'cartoon') return;
+      if(styleTransferModels[preset]) return;
+      const url = MODEL_URLS[preset];
+      if(!url){ alert('No model URL for preset: '+preset); return; }
+
+      modelStatus.innerText = 'loading...';
+      try{
+        // ml5.styleTransfer will fetch model.json from the URL (must point to model directory)
+        const st = await ml5.styleTransfer(url, ()=>{
+          modelStatus.innerText = 'loaded: '+preset;
+        });
+        styleTransferModels[preset] = st;
+        modelStatus.innerText = 'loaded: '+preset;
+      }catch(err){
+        console.error('Failed to load model', err);
+        modelStatus.innerText = 'failed';
+      }
+    }
+
+    // --- Cartoonify (same as previous) ---
+    async function applyCartoonify(){
+      // draw original
+      drawToCanvas(originalImage);
+      const w = canvas.width, h = canvas.height;
+      let img = ctx.getImageData(0,0,w,h);
+      stackBlurCanvasRGBA('canvas', 0, 0, w, h, 3);
+      const edge = sobelEdgeDetection(ctx.getImageData(0,0,w,h));
+      const poster = posterize(ctx.getImageData(0,0,w,h), 6);
+      for(let i=0;i<poster.data.length;i+=4){
+        const e = edge.data[i];
+        if(e > 60){ poster.data[i] = poster.data[i]*0.3; poster.data[i+1] = poster.data[i+1]*0.3; poster.data[i+2] = poster.data[i+2]*0.3; }
+      }
+      ctx.putImageData(poster,0,0);
+    }
+
+    // --- Utilities (same as before) ---
+    function imageLoaded(img){return new Promise(resolve=>{ if(img.complete) resolve(); else img.onload=()=>resolve(); })}
+    function posterize(imageData, levels){ const d = imageData.data; const step = Math.floor(256/levels); for(let i=0;i<d.length;i+=4){ d[i] = Math.floor(d[i]/step)*step; d[i+1]=Math.floor(d[i+1]/step)*step; d[i+2]=Math.floor(d[i+2]/step)*step; } return imageData; }
+    function sobelEdgeDetection(imageData){ const width = imageData.width, height = imageData.height; const gray = new Uint8ClampedArray(width*height); const d = imageData.data; for(let i=0;i<d.length;i+=4){ const idx = i/4; gray[idx] = (d[i]*0.3 + d[i+1]*0.59 + d[i+2]*0.11); } const out = new Uint8ClampedArray(width*height*4); function g(x,y){ if(x<0||x>=width||y<0||y>=height) return 0; return gray[y*width+x]; } for(let y=0;y<height;y++){ for(let x=0;x<width;x++){ const gx = -g(x-1,y-1)-2*g(x-1,y)+-g(x-1,y+1)+g(x+1,y-1)+2*g(x+1,y)+g(x+1,y+1); const gy = -g(x-1,y-1)-2*g(x,y-1)-g(x+1,y-1)+g(x-1,y+1)+2*g(x,y+1)+g(x+1,y+1); const mag = Math.min(255, Math.sqrt(gx*gx + gy*gy)); const off = (y*width + x)*4; out[off]=out[off+1]=out[off+2]=mag; out[off+3]=255; } } return new ImageData(out, width, height); }
+
+    function stackBlurCanvasRGBA(id, top_x, top_y, width, height, radius) { if (isNaN(radius) || radius < 1) return; const imageData = ctx.getImageData(top_x, top_y, width, height); const pixels = imageData.data; const w = width, h = height; const mul_table = [512,512,456,512,328,456,335,512,405,328,271,456,388,335,292,512]; const shg_table = [9,9,10,9,11,10,11,9,10,11,12,10,10,11,12,9]; let mul_sum = mul_table[2]; let shg_sum = shg_table[2]; let rsum,gsum,bsum,asum,x,y,i,p,p1,p2,yp,yi,yw; const div = radius + radius + 1; const w4 = w<<2; const dv = new Uint8ClampedArray(256*div); for (i=0;i<256*div;i++) dv[i]=(i/div)|0; yw = yi = 0; const vmin = new Uint32Array(Math.max(w,h)); for (y = 0; y < h; y++){ rsum = gsum = bsum = asum = 0; for(i = -radius; i <= radius; i++){ p = (yi + Math.min(w-1, Math.max(i,0)) ) << 2; rsum += pixels[p]; gsum += pixels[p+1]; bsum += pixels[p+2]; asum += pixels[p+3]; } for (x = 0; x < w; x++){ pixels[yi<<2] = dv[rsum]; pixels[(yi<<2)+1] = dv[gsum]; pixels[(yi<<2)+2] = dv[bsum]; pixels[(yi<<2)+3] = dv[asum]; if(y==0){ vmin[x] = Math.min(x+radius+1, w-1); } p1 = (yw + vmin[x]) << 2; p2 = (yw + Math.max(x-radius,0)) << 2; rsum += pixels[p1] - pixels[p2]; gsum += pixels[p1+1] - pixels[p2+1]; bsum += pixels[p1+2] - pixels[p2+2]; asum += pixels[p1+3] - pixels[p2+3]; yi++; } yw += w; } ctx.putImageData(imageData, top_x, top_y); }
+
+    // --- Preload models in background to improve UX ---
+    (async function preload(){
+      // Attempt to preload the model files for quick access (non-blocking)
+      for(const p of ['vangogh','picasso']){
+        ensureModelLoaded(p).catch(e=>console.warn('preload failed',p,e));
+      }
+    })();
+
+  </script>
+</body>
+</html>

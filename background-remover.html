@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Background Remover — In-Browser (TFJS BodyPix)</title>
+    <style>
+        :root {
+            --bg: #0f1724;
+            --card: #0b1220;
+            --muted: #9fb0d1;
+            --accent: #7c3aed;
+            --text: #e6eef8;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(180deg, #071029, #071430);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 28px;
+            line-height: 1.5;
+        }
+        
+        .app {
+            width: 980px;
+            max-width: 100%;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent), #071223;
+            border-radius: 12px;
+            padding: 28px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+        
+        header {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 20px;
+        }
+        
+        header h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 700;
+        }
+        
+        .cols {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 24px;
+        }
+        
+        @media (min-width: 900px) {
+            .cols {
+                grid-template-columns: 360px 1fr;
+            }
+        }
+        
+        .panel {
+            background: rgba(255, 255, 255, 0.02);
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        .upload {
+            border: 2px dashed rgba(255, 255, 255, 0.1);
+            padding: 30px 20px;
+            border-radius: 8px;
+            min-height: 200px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            transition: border-color 0.3s ease;
+        }
+        
+        .upload.dragover {
+            border-color: var(--accent);
+            background: rgba(124, 58, 237, 0.05);
+        }
+        
+        .thumb {
+            max-width: 100%;
+            max-height: 240px;
+            border-radius: 8px;
+            display: none;
+            margin-top: 15px;
+        }
+        
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .btn {
+            background: linear-gradient(90deg, var(--accent), #4c1d95);
+            border: none;
+            color: white;
+            padding: 12px 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: transform 0.2s, opacity 0.2s;
+        }
+        
+        .btn:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .btn-sm {
+            padding: 10px 14px;
+            font-size: 14px;
+        }
+        
+        .muted {
+            color: var(--muted);
+            font-size: 14px;
+        }
+        
+        canvas {
+            width: 100%;
+            border-radius: 8px;
+            background: #071225;
+            display: block;
+            max-width: 100%;
+        }
+        
+        .row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        select, input[type="color"] {
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(0, 0, 0, 0.2);
+            color: var(--text);
+            cursor: pointer;
+        }
+        
+        .note {
+            font-size: 13px;
+            color: var(--muted);
+            margin-top: 15px;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 6px;
+        }
+        
+        .status {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: var(--accent);
+            animation: spin 1s linear infinite;
+            display: none;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .progress {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 5px;
+            display: none;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), #4c1d95);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        
+        footer {
+            margin-top: 20px;
+            color: var(--muted);
+            font-size: 13px;
+            text-align: center;
+        }
+        
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        
+        .tip {
+            background: rgba(124, 58, 237, 0.1);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <header>
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <rect width="24" height="24" rx="6" fill="#071430"></rect>
+                <path d="M7 16c1-2 4-7 10-8" stroke="#7c3aed" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <div>
+                <h1>Background Remover — Browser</h1>
+                <div class="muted">Remove or replace backgrounds client-side using TensorFlow.js + BodyPix</div>
+            </div>
+        </header>
+
+        <div class="cols">
+            <div class="panel">
+                <div class="upload" id="uploadArea">
+                    <input id="fileInput" type="file" accept="image/*" style="display:none">
+                    <div id="dropHint">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color: var(--muted); margin-bottom: 10px;">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="17 8 12 3 7 8"></polyline>
+                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                        </svg>
+                        <p>Drop an image here or</p>
+                        <button class="btn btn-sm" id="chooseBtn">Choose file</button>
+                    </div>
+                    <img id="preview" class="thumb" alt="preview">
+                </div>
+
+                <div class="controls">
+                    <div class="row">
+                        <button class="btn" id="removeBtn" disabled>Remove Background</button>
+                        <button class="btn btn-sm" id="downloadBtn" disabled>Download</button>
+                    </div>
+
+                    <div class="row">
+                        <label class="muted">Background:</label>
+                        <select id="bgMode">
+                            <option value="transparent">Transparent</option>
+                            <option value="color">Solid Color</option>
+                            <option value="image">Replace with Image</option>
+                        </select>
+                        <input type="color" id="bgColor" value="#3b82f6" style="display:none">
+                        <input type="file" id="bgImageInput" accept="image/*" style="display:none">
+                    </div>
+
+                    <div class="row">
+                        <label class="muted">Model Quality:</label>
+                        <select id="quality">
+                            <option value="low">Fast (Low)</option>
+                            <option value="medium" selected>Balanced</option>
+                            <option value="high">Accurate (Slow)</option>
+                        </select>
+                    </div>
+
+                    <div class="row">
+                        <div class="muted">Status: <span id="status">Idle</span><div class="spinner" id="spinner"></div></div>
+                    </div>
+                    
+                    <div class="progress" id="progress">
+                        <div class="progress-bar" id="progressBar"></div>
+                    </div>
+
+                    <div class="note">
+                        This uses BodyPix which works best for people and common subjects. For products or complex scenes, server-side models provide better results.
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="result-header">
+                    <div>
+                        <strong>Result Preview</strong>
+                        <div class="muted">Processed image will appear here</div>
+                    </div>
+                    <div class="tip">Tip: Use high-res images for finer edges</div>
+                </div>
+                <canvas id="outputCanvas"></canvas>
+            </div>
+        </div>
+
+        <footer>
+            Built with TensorFlow.js & BodyPix. Processing happens entirely in your browser - no images are uploaded to any server.
+        </footer>
+    </div>
+
+    <!-- Load TensorFlow.js and BodyPix from CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.15.0/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/body-pix@2.0.5/dist/body-pix.min.js"></script>
+
+    <script>
+        // DOM elements
+        const fileInput = document.getElementById('fileInput');
+        const chooseBtn = document.getElementById('chooseBtn');
+        const preview = document.getElementById('preview');
+        const removeBtn = document.getElementById('removeBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const statusEl = document.getElementById('status');
+        const spinner = document.getElementById('spinner');
+        const outputCanvas = document.getElementById('outputCanvas');
+        const ctx = outputCanvas.getContext('2d');
+        const bgMode = document.getElementById('bgMode');
+        const bgColor = document.getElementById('bgColor');
+        const bgImageInput = document.getElementById('bgImageInput');
+        const qualitySel = document.getElementById('quality');
+        const uploadArea = document.getElementById('uploadArea');
+        const progress = document.getElementById('progress');
+        const progressBar = document.getElementById('progressBar');
+        const dropHint = document.getElementById('dropHint');
+
+        // Variables
+        let originalImg = new Image();
+        let bgReplaceImg = new Image();
+        let net = null;
+        let isProcessing = false;
+
+        // Event listeners for UI interactions
+        chooseBtn.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', e => {
+            const f = e.target.files[0];
+            if (f) loadFile(f);
+        });
+
+        // Drag and drop functionality
+        uploadArea.addEventListener('dragover', e => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', e => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', e => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const f = e.dataTransfer.files[0];
+            if (f && f.type.startsWith('image/')) {
+                loadFile(f);
+            } else {
+                updateStatus('Please drop a valid image file', 'error');
+            }
+        });
+
+        // Background mode change
+        bgMode.addEventListener('change', () => {
+            if (bgMode.value === 'color') {
+                bgColor.style.display = 'inline-block';
+                bgImageInput.style.display = 'none';
+            } else if (bgMode.value === 'image') {
+                bgColor.style.display = 'none';
+                bgImageInput.style.display = 'inline-block';
+            } else {
+                bgColor.style.display = 'none';
+                bgImageInput.style.display = 'none';
+            }
+        });
+
+        // Background image input
+        bgImageInput.addEventListener('change', e => {
+            const f = e.target.files[0];
+            if (!f) return;
+            const reader = new FileReader();
+            reader.onload = e => {
+                bgReplaceImg.src = e.target.result;
+            };
+            reader.readAsDataURL(f);
+        });
+
+        // Process button
+        removeBtn.addEventListener('click', async () => {
+            if (isProcessing) return;
+            await processImage();
+        });
+
+        // Download button
+        downloadBtn.addEventListener('click', () => {
+            if (!originalImg.src) return;
+            
+            const link = document.createElement('a');
+            link.download = 'background-removed.png';
+            link.href = outputCanvas.toDataURL('image/png');
+            link.click();
+        });
+
+        // Function to update status
+        function updateStatus(text, type = 'info') {
+            statusEl.textContent = text;
+            if (type === 'loading') {
+                spinner.style.display = 'inline-block';
+                progress.style.display = 'block';
+            } else {
+                spinner.style.display = 'none';
+                progress.style.display = 'none';
+            }
+            
+            if (type === 'error') {
+                statusEl.style.color = '#ef4444';
+            } else {
+                statusEl.style.color = '';
+            }
+        }
+
+        // Function to update progress
+        function updateProgress(percent) {
+            progressBar.style.width = `${percent}%`;
+        }
+
+        // Load image file
+        function loadFile(file) {
+            updateStatus('Loading image...', 'loading');
+            updateProgress(30);
+            
+            const reader = new FileReader();
+            reader.onload = e => {
+                preview.src = e.target.result;
+                preview.style.display = 'block';
+                dropHint.style.display = 'none';
+                
+                originalImg.onload = () => {
+                    // Set canvas dimensions to match image
+                    outputCanvas.width = originalImg.width;
+                    outputCanvas.height = originalImg.height;
+                    
+                    // Draw original image on canvas
+                    ctx.drawImage(originalImg, 0, 0);
+                    
+                    // Enable process button
+                    removeBtn.disabled = false;
+                    updateStatus('Ready to process');
+                    updateProgress(100);
+                    
+                    // Hide progress after a short delay
+                    setTimeout(() => {
+                        progress.style.display = 'none';
+                    }, 500);
+                };
+                
+                originalImg.src = e.target.result;
+            };
+            
+            reader.onerror = () => {
+                updateStatus('Error loading image', 'error');
+                progress.style.display = 'none';
+            };
+            
+            reader.readAsDataURL(file);
+        }
+
+        // Ensure TensorFlow.js model is loaded
+        async function ensureModel() {
+            if (net) return net;
+            
+            updateStatus('Loading AI model...', 'loading');
+            updateProgress(20);
+            
+            try {
+                // Choose parameters based on quality selection
+                const multiplier = {
+                    low: 0.5,
+                    medium: 0.75,
+                    high: 1.0
+                };
+                
+                const quality = qualitySel.value;
+                net = await bodyPix.load({
+                    architecture: 'MobileNetV1',
+                    outputStride: 16,
+                    multiplier: multiplier[quality],
+                    quantBytes: 2
+                });
+                
+                updateProgress(60);
+                updateStatus('Model loaded');
+                
+                // Hide progress after a short delay
+                setTimeout(() => {
+                    progress.style.display = 'none';
+                }, 800);
+                
+                return net;
+            } catch (error) {
+                console.error('Error loading model:', error);
+                updateStatus('Error loading model', 'error');
+                progress.style.display = 'none';
+                throw error;
+            }
+        }
+
+        // Process the image
+        async function processImage() {
+            if (!originalImg.src) return;
+            
+            isProcessing = true;
+            removeBtn.disabled = true;
+            downloadBtn.disabled = true;
+            
+            try {
+                // Load model if not already loaded
+                const model = await ensureModel();
+                
+                updateStatus('Segmenting image...', 'loading');
+                updateProgress(40);
+                
+                // Perform segmentation
+                const segmentation = await model.segmentPerson(originalImg, {
+                    internalResolution: 'medium',
+                    segmentationThreshold: 0.7
+                });
+                
+                updateProgress(70);
+                updateStatus('Compositing result...');
+                
+                // Create mask and composite image
+                const mask = segmentation.data;
+                const width = originalImg.width;
+                const height = originalImg.height;
+                
+                // Draw the appropriate background
+                if (bgMode.value === 'transparent') {
+                    drawTransparentBackground(mask, width, height);
+                } else if (bgMode.value === 'color') {
+                    drawColorBackground(mask, width, height);
+                } else if (bgMode.value === 'image' && bgReplaceImg.src) {
+                    await drawImageBackground(mask, width, height);
+                } else {
+                    drawTransparentBackground(mask, width, height);
+                }
+                
+                updateProgress(100);
+                updateStatus('Background removed successfully!');
+                
+                // Enable download button
+                downloadBtn.disabled = false;
+                
+                // Hide progress after a short delay
+                setTimeout(() => {
+                    progress.style.display = 'none';
+                }, 500);
+                
+            } catch (error) {
+                console.error('Error processing image:', error);
+                updateStatus('Error processing image', 'error');
+            } finally {
+                isProcessing = false;
+                removeBtn.disabled = false;
+            }
+        }
+
+        // Draw transparent background (keep foreground, make background transparent)
+        function drawTransparentBackground(mask, width, height) {
+            // Create temporary canvas to get image data
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = width;
+            tempCanvas.height = height;
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCtx.drawImage(originalImg, 0, 0);
+            
+            const imgData = tempCtx.getImageData(0, 0, width, height);
+            const data = imgData.data;
+            
+            // Apply mask to make background transparent
+            for (let i = 0; i < mask.length; i++) {
+                // If pixel is not part of person, set alpha to 0
+                if (mask[i] === 0) {
+                    data[i * 4 + 3] = 0; // Set alpha to 0
+                }
+            }
+            
+            // Put modified image data back to canvas
+            ctx.clearRect(0, 0, width, height);
+            ctx.putImageData(imgData, 0, 0);
+        }
+
+        // Draw solid color background
+        function drawColorBackground(mask, width, height) {
+            // First draw the color background
+            ctx.clearRect(0, 0, width, height);
+            ctx.fillStyle = bgColor.value;
+            ctx.fillRect(0, 0, width, height);
+            
+            // Then draw the foreground (person) on top
+            drawForeground(mask, width, height);
+        }
+
+        // Draw image background
+        async function drawImageBackground(mask, width, height) {
+            return new Promise(resolve => {
+                // Wait for background image to load if not already
+                if (!bgReplaceImg.complete) {
+                    bgReplaceImg.onload = () => {
+                        drawImageBackgroundHelper(mask, width, height);
+                        resolve();
+                    };
+                } else {
+                    drawImageBackgroundHelper(mask, width, height);
+                    resolve();
+                }
+            });
+        }
+
+        function drawImageBackgroundHelper(mask, width, height) {
+            // Clear canvas and draw background image
+            ctx.clearRect(0, 0, width, height);
+            
+            // Draw background image scaled to cover the canvas
+            const bgAspect = bgReplaceImg.width / bgReplaceImg.height;
+            const canvasAspect = width / height;
+            
+            let drawWidth, drawHeight, offsetX = 0, offsetY = 0;
+            
+            if (bgAspect > canvasAspect) {
+                // Background is wider than canvas
+                drawHeight = height;
+                drawWidth = height * bgAspect;
+                offsetX = (width - drawWidth) / 2;
+            } else {
+                // Background is taller than canvas
+                drawWidth = width;
+                drawHeight = width / bgAspect;
+                offsetY = (height - drawHeight) / 2;
+            }
+            
+            ctx.drawImage(bgReplaceImg, offsetX, offsetY, drawWidth, drawHeight);
+            
+            // Then draw the foreground (person) on top
+            drawForeground(mask, width, height);
+        }
+
+        // Draw foreground (person) based on mask
+        function drawForeground(mask, width, height) {
+            // Create temporary canvas to get image data
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = width;
+            tempCanvas.height = height;
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCtx.drawImage(originalImg, 0, 0);
+            
+            const imgData = tempCtx.getImageData(0, 0, width, height);
+            const data = imgData.data;
+            
+            // Apply mask - only keep pixels that are part of the person
+            for (let i = 0; i < mask.length; i++) {
+                // If pixel is not part of person, set alpha to 0
+                if (mask[i] === 0) {
+                    data[i * 4 + 3] = 0; // Set alpha to 0
+                }
+            }
+            
+            // Put modified image data (foreground) on top of background
+            ctx.putImageData(imgData, 0, 0);
+        }
+    </script>
+</body>
+</html>

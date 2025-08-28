@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Text Encryptor Tool</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+    }
+    
+    .card {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    }
+    
+    .btn-primary {
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+      box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2);
+      transition: all 0.3s ease;
+    }
+    
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 8px rgba(37, 99, 235, 0.3);
+    }
+    
+    .btn-secondary {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      box-shadow: 0 4px 6px rgba(5, 150, 105, 0.2);
+    }
+    
+    .btn-danger {
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+      box-shadow: 0 4px 6px rgba(220, 38, 38, 0.2);
+    }
+    
+    .input-field {
+      transition: all 0.3s ease;
+    }
+    
+    .input-field:focus {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+      outline: none;
+    }
+    
+    .tab {
+      transition: all 0.3s ease;
+    }
+    
+    .tab.active {
+      border-bottom: 3px solid #3b82f6;
+      color: #1e40af;
+      font-weight: 600;
+    }
+    
+    .copy-btn {
+      transition: all 0.2s ease;
+    }
+    
+    .copy-btn:hover {
+      transform: scale(1.05);
+    }
+    
+    .security-badge {
+      font-size: 0.75rem;
+      padding: 0.25rem 0.5rem;
+      border-radius: 9999px;
+    }
+    
+    .security-low {
+      background-color: #fee2e2;
+      color: #b91c1c;
+    }
+    
+    .security-medium {
+      background-color: #fef3c7;
+      color: #b45309;
+    }
+    
+    .security-high {
+      background-color: #dcfce7;
+      color: #166534;
+    }
+  </style>
+</head>
+<body class="min-h-screen p-4 md:p-8 flex items-center justify-center">
+
+  <div class="card max-w-3xl w-full p-6 md:p-8">
+    <div class="text-center mb-8">
+      <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-100 mb-4">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+        </svg>
+      </div>
+      <h1 class="text-2xl font-bold text-gray-800 mb-2">Text Encryptor Tool</h1>
+      <p class="text-gray-600">Secure your messages with various encryption algorithms</p>
+    </div>
+
+    <div class="flex border-b border-gray-200 mb-6">
+      <button id="encryptTab" class="tab active px-4 py-2 text-sm font-medium">Encrypt</button>
+      <button id="decryptTab" class="tab px-4 py-2 text-sm font-medium">Decrypt</button>
+    </div>
+
+    <div id="encryptSection">
+      <div class="mb-6">
+        <label for="plainText" class="block text-sm font-medium text-gray-700 mb-1">Text to Encrypt</label>
+        <textarea id="plainText" rows="4" class="w-full p-4 border border-gray-300 rounded-lg input-field focus:outline-none" 
+                  placeholder="Enter your secret message..."></textarea>
+      </div>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <div>
+          <label for="encryptionMethod" class="block text-sm font-medium text-gray-700 mb-1">Encryption Method</label>
+          <select id="encryptionMethod" class="w-full p-3 border border-gray-300 rounded-lg input-field focus:outline-none cursor-pointer">
+            <option value="aes">AES (Advanced Encryption Standard)</option>
+            <option value="caesar">Caesar Cipher</option>
+            <option value="vigenere">Vigenère Cipher</option>
+            <option value="xor">XOR Cipher</option>
+            <option value="base64">Base64 Encoding</option>
+          </select>
+        </div>
+        <div>
+          <label for="encryptionKey" class="block text-sm font-medium text-gray-700 mb-1">Encryption Key</label>
+          <input id="encryptionKey" type="text" class="w-full p-3 border border-gray-300 rounded-lg input-field focus:outline-none" 
+                 placeholder="Enter secret key">
+        </div>
+      </div>
+      
+      <div class="mb-4">
+        <div class="flex items-center mb-2">
+          <span class="text-sm font-medium text-gray-700 mr-2">Security Level:</span>
+          <span id="securityLevel" class="security-badge security-high">High</span>
+        </div>
+        <div class="w-full bg-gray-200 rounded-full h-2.5">
+          <div id="securityMeter" class="bg-blue-600 h-2.5 rounded-full" style="width: 100%"></div>
+        </div>
+      </div>
+      
+      <button id="encryptBtn" class="btn-primary text-white px-6 py-3 rounded-lg font-medium w-full mb-4">
+        Encrypt Message
+      </button>
+      
+      <div class="transition-all duration-300 ease-in-out" id="encryptedOutput" style="opacity: 0; height: 0; overflow: hidden;">
+        <label class="block text-sm font-medium text-gray-700 mb-1">Encrypted Result</label>
+        <div class="relative">
+          <textarea id="encryptedText" rows="4" class="w-full p-4 border border-gray-300 rounded-lg input-field focus:outline-none bg-gray-50" readonly></textarea>
+          <button id="copyEncrypted" class="copy-btn absolute top-3 right-3 p-2 bg-gray-200 rounded-lg hover:bg-gray-300">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+            </svg>
+          </button>
+        </div>
+        <div class="flex justify-end mt-2">
+          <button id="downloadEncrypted" class="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            Download as File
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div id="decryptSection" class="hidden">
+      <div class="mb-6">
+        <label for="cipherText" class="block text-sm font-medium text-gray-700 mb-1">Text to Decrypt</label>
+        <textarea id="cipherText" rows="4" class="w-full p-4 border border-gray-300 rounded-lg input-field focus:outline-none" 
+                  placeholder="Enter encrypted message..."></textarea>
+      </div>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <div>
+          <label for="decryptionMethod" class="block text-sm font-medium text-gray-700 mb-1">Decryption Method</label>
+          <select id="decryptionMethod" class="w-full p-3 border border-gray-300 rounded-lg input-field focus:outline-none cursor-pointer">
+            <option value="aes">AES (Advanced Encryption Standard)</option>
+            <option value="caesar">Caesar Cipher</option>
+            <option value="vigenere">Vigenère Cipher</option>
+            <option value="xor">XOR Cipher</option>
+            <option value="base64">Base64 Encoding</option>
+          </select>
+        </div>
+        <div>
+          <label for="decryptionKey" class="block text-sm font-medium text-gray-700 mb-1">Decryption Key</label>
+          <input id="decryptionKey" type="text" class="w-full p-3 border border-gray-300 rounded-lg input-field focus:outline-none" 
+                 placeholder="Enter secret key">
+        </div>
+      </div>
+      
+      <button id="decryptBtn" class="btn-secondary text-white px-6 py-3 rounded-lg font-medium w-full mb-4">
+        Decrypt Message
+      </button>
+      
+      <div class="transition-all duration-300 ease-in-out" id="decryptedOutput" style="opacity: 0; height: 0; overflow: hidden;">
+        <label class="block text-sm font-medium text-gray-700 mb-1">Decrypted Result</label>
+        <div class="relative">
+          <textarea id="decryptedText" rows="4" class="w-full p-4 border border-gray-300 rounded-lg input-field focus:outline-none bg-gray-50" readonly></textarea>
+          <button id="copyDecrypted" class="copy-btn absolute top-3 right-3 p-2 bg-gray-200 rounded-lg hover:bg-gray-300">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="text-center text-xs text-gray-500 mt-8">
+      Note: For AES encryption, this tool uses the browser's built-in crypto API. Your data never leaves your device.
+    </div>
+  </div>
+
+  <script>
+    // DOM elements
+    const encryptTab = document.getElementById('encryptTab');
+    const decryptTab = document.getElementById('decryptTab');
+    const encryptSection = document.getElementById('encryptSection');
+    const decryptSection = document.getElementById('decryptSection');
+    const plainText = document.getElementById('plainText');
+    const cipherText = document.getElementById('cipherText');
+    const encryptionMethod = document.getElementById('encryptionMethod');
+    const decryptionMethod = document.getElementById('decryptionMethod');
+    const encryptionKey = document.getElementById('encryptionKey');
+    const decryptionKey = document.getElementById('decryptionKey');
+    const encryptBtn = document.getElementById('encryptBtn');
+    const decryptBtn = document.getElementById('decryptBtn');
+    const encryptedOutput = document.getElementById('encryptedOutput');
+    const decryptedOutput = document.getElementById('decryptedOutput');
+    const encryptedText = document.getElementById('encryptedText');
+    const decryptedText = document.getElementById('decryptedText');
+    const copyEncrypted = document.getElementById('copyEncrypted');
+    const copyDecrypted = document.getElementById('copyDecrypted');
+    const downloadEncrypted = document.getElementById('downloadEncrypted');
+    const securityLevel = document.getElementById('securityLevel');
+    const securityMeter = document.getElementById('securityMeter');
+
+    // Tab switching
+    encryptTab.addEventListener('click', () => {
+      encryptTab.classList.add('active');
+      decryptTab.classList.remove('active');
+      encryptSection.classList.remove('hidden');
+      decryptSection.classList.add('hidden');
+    });
+
+    decryptTab.addEventListener('click', () => {
+      decryptTab.classList.add('active');
+      encryptTab.classList.remove('active');
+      decryptSection.classList.remove('hidden');
+      encryptSection.classList.add('hidden');
+    });
+
+    // Update security level indicator
+    encryptionMethod.addEventListener('change', updateSecurityLevel);
+    function updateSecurityLevel() {
+      const method = encryptionMethod.value;
+      let level, width, badgeClass;
+      
+      switch(method) {
+        case 'aes':
+          level = 'High';
+          width = '100%';
+          badgeClass = 'security-high';
+          break;
+        case 'vigenere':
+          level = 'Medium';
+          width = '65%';
+          badgeClass = 'security-medium';
+          break;
+        case 'xor':
+          level = 'Medium';
+          width = '50%';
+          badgeClass = 'security-medium';
+          break;
+        case 'caesar':
+          level = 'Low';
+          width = '30%';
+          badgeClass = 'security-low';
+          break;
+        case 'base64':
+          level = 'None';
+          width = '10%';
+          badgeClass = 'security-low';
+          break;
+        default:
+          level = 'Medium';
+          width = '50%';
+          badgeClass = 'security-medium';
+      }
+      
+      securityLevel.textContent = level;
+      securityLevel.className = `security-badge ${badgeClass}`;
+      securityMeter.style.width = width;
+    }
+
+    // Copy to clipboard functions
+    copyEncrypted.addEventListener('click', () => {
+      copyToClipboard(encryptedText);
+      showToast('Encrypted text copied!');
+    });
+
+    copyDecrypted.addEventListener('click', () => {
+      copyToClipboard(decryptedText);
+      showToast('Decrypted text copied!');
+    });
+
+    function copyToClipboard(element) {
+      element.select();
+      document.execCommand('copy');
+      // Deselect the text
+      window.getSelection().removeAllRanges();
+    }
+
+    // Download encrypted text
+    downloadEncrypted.addEventListener('click', () => {
+      if (!encryptedText.value) {
+        showToast('No encrypted text to download', 'error');
+        return;
+      }
+
+      const blob = new Blob([encryptedText.value], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'encrypted_message.txt';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast('Download started!');
+    });
+
+    // Show toast notification
+    function showToast(message, type = 'success') {
+      const toast = document.createElement('div');
+      toast.className = `fixed bottom-4 right-4 px-4 py-2 rounded-lg shadow-lg text-white ${
+        type === 'success' ? 'bg-green-600' : 'bg-red-600'
+      }`;
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'transition-opacity', 'duration-300');
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+
+    // Encryption methods
+    encryptBtn.addEventListener('click', async () => {
+      const text = plainText.value.trim();
+      const method = encryptionMethod.value;
+      const key = encryptionKey.value.trim();
+      
+      if (!text) {
+        showToast('Please enter text to encrypt', 'error');
+        return;
+      }
+      
+      try {
+        let result;
+        
+        switch(method) {
+          case 'aes':
+            if (!key) {
+              showToast('AES requires an encryption key', 'error');
+              return;
+            }
+            result = await encryptAES(text, key);
+            break;
+          case 'caesar':
+            if (!key) {
+              showToast('Please enter a shift value', 'error');
+              return;
+            }
+            result = caesarCipher(text, parseInt(key));
+            break;
+          case 'vigenere':
+            if (!key) {
+              showToast('Vigenère cipher requires a key', 'error');
+              return;
+            }
+            result = vigenereCipher(text, key, true);
+            break;
+          case 'xor':
+            if (!key) {
+              showToast('XOR cipher requires a key', 'error');
+              return;
+            }
+            result = xorCipher(text, key);
+            break;
+          case 'base64':
+            result = btoa(unescape(encodeURIComponent(text)));
+            break;
+          default:
+            throw new Error('Unknown encryption method');
+        }
+        
+        encryptedText.value = result;
+        encryptedOutput.style.opacity = '1';
+        encryptedOutput.style.height = 'auto';
+        encryptedOutput.style.overflow = 'visible';
+        
+        showToast('Message encrypted successfully!');
+      } catch (error) {
+        showToast(`Encryption failed: ${error.message}`, 'error');
+        console.error(error);
+      }
+    });
+
+    // Decryption methods
+    decryptBtn.addEventListener('click', async () => {
+      const text = cipherText.value.trim();
+      const method = decryptionMethod.value;
+      const key = decryptionKey.value.trim();
+      
+      if (!text) {
+        showToast('Please enter text to decrypt', 'error');
+        return;
+      }
+      
+      try {
+        let result;
+        
+        switch(method) {
+          case 'aes':
+            if (!key) {
+              showToast('AES requires a decryption key', 'error');
+              return;
+            }
+            result = await decryptAES(text, key);
+            break;
+          case 'caesar':
+            if (!key) {
+              showToast('Please enter a shift value', 'error');
+              return;
+            }
+            result = caesarCipher(text, -parseInt(key));
+            break;
+          case 'vigenere':
+            if (!key) {
+              showToast('Vigenère cipher requires a key', 'error');
+              return;
+            }
+            result = vigenereCipher(text, key, false);
+            break;
+          case 'xor':
+            if (!key) {
+              showToast('XOR cipher requires a key', 'error');
+              return;
+            }
+            result = xorCipher(text, key);
+            break;
+          case 'base64':
+            result = decodeURIComponent(escape(atob(text)));
+            break;
+          default:
+            throw new Error('Unknown decryption method');
+        }
+        
+        decryptedText.value = result;
+        decryptedOutput.style.opacity = '1';
+        decryptedOutput.style.height = 'auto';
+        decryptedOutput.style.overflow = 'visible';
+        
+        showToast('Message decrypted successfully!');
+      } catch (error) {
+        showToast(`Decryption failed: ${error.message}`, 'error');
+        console.error(error);
+      }
+    });
+
+    // AES Encryption (using Web Crypto API)
+    async function encryptAES(text, password) {
+      // Prepare the key
+      const encoder = new TextEncoder();
+      const keyMaterial = await window.crypto.subtle.importKey(
+        'raw',
+        encoder.encode(password),
+        { name: 'PBKDF2' },
+        false,
+        ['deriveKey']
+      );
+      
+      const salt = window.crypto.getRandomValues(new Uint8Array(16));
+      const key = await window.crypto.subtle.deriveKey(
+        {
+          name: 'PBKDF2',
+          salt: salt,
+          iterations: 100000,
+          hash: 'SHA-256'
+        },
+        keyMaterial,
+        { name: 'AES-GCM', length: 256 },
+        false,
+        ['encrypt']
+      );
+      
+      // Encrypt the text
+      const iv = window.crypto.getRandomValues(new Uint8Array(12));
+      const encrypted = await window.crypto.subtle.encrypt(
+        {
+          name: 'AES-GCM',
+          iv: iv
+        },
+        key,
+        encoder.encode(text)
+      );
+      
+      // Combine salt, iv, and ciphertext
+      const combined = new Uint8Array(salt.length + iv.length + encrypted.byteLength);
+      combined.set(salt, 0);
+      combined.set(iv, salt.length);
+      combined.set(new Uint8Array(encrypted), salt.length + iv.length);
+      
+      // Convert to Base64 for storage
+      return btoa(String.fromCharCode.apply(null, combined));
+    }
+
+    // AES Decryption (using Web Crypto API)
+    async function decryptAES(ciphertext, password) {
+      try {
+        // Convert from Base64
+        const binaryString = atob(ciphertext);
+        const binaryData = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          binaryData[i] = binaryString.charCodeAt(i);
+        }
+        
+        // Extract salt, iv, and encrypted data
+        const salt = binaryData.slice(0, 16);
+        const iv = binaryData.slice(16, 28);
+        const encrypted = binaryData.slice(28);
+        
+        // Prepare the key
+        const encoder = new TextEncoder();
+        const keyMaterial = await window.crypto.subtle.importKey(
+          'raw',
+          encoder.encode(password),
+          { name: 'PBKDF2' },
+          false,
+          ['deriveKey']
+        );
+        
+        const key = await window.crypto.subtle.deriveKey(
+          {
+            name: 'PBKDF2',
+            salt: salt,
+            iterations: 100000,
+            hash: 'SHA-256'
+          },
+          keyMaterial,
+          { name: 'AES-GCM', length: 256 },
+          false,
+          ['decrypt']
+        );
+        
+        // Decrypt the text
+        const decrypted = await window.crypto.subtle.decrypt(
+          {
+            name: 'AES-GCM',
+            iv: iv
+          },
+          key,
+          encrypted
+        );
+        
+        return new TextDecoder().decode(decrypted);
+      } catch (error) {
+        throw new Error('Decryption failed. Wrong key or corrupted data.');
+      }
+    }
+
+    // Caesar Cipher
+    function caesarCipher(text, shift) {
+      shift = shift % 26;
+      if (shift < 0) shift += 26;
+      
+      return text.replace(/[a-z]/gi, (char) => {
+        const code = char.charCodeAt(0);
+        let offset = code >= 65 && code <= 90 ? 65 : 97;
+        return String.fromCharCode(((code - offset + shift) % 26) + offset);
+      });
+    }
+
+    // Vigenère Cipher
+    function vigenereCipher(text, key, encrypt) {
+      key = key.toLowerCase().replace(/[^a-z]/g, '');
+      if (!key.length) return text;
+      
+      let keyIndex = 0;
+      return text.replace(/[a-z]/gi, (char) => {
+        const code = char.charCodeAt(0);
+        const offset = code >= 65 && code <= 90 ? 65 : 97;
+        const keyChar = key.charCodeAt(keyIndex % key.length) - 97;
+        keyIndex++;
+        
+        const shift = encrypt ? keyChar : (26 - keyChar) % 26;
+        return String.fromCharCode(((code - offset + shift) % 26) + offset);
+      });
+    }
+
+    // XOR Cipher
+    function xorCipher(text, key) {
+      let result = '';
+      for (let i = 0; i < text.length; i++) {
+        const charCode = text.charCodeAt(i) ^ key.charCodeAt(i % key.length);
+        result += String.fromCharCode(charCode);
+      }
+      return btoa(unescape(encodeURIComponent(result)));
+    }
+
+    // Initialize security level
+    updateSecurityLevel();
+  </script>
+
+</body>
+</html>

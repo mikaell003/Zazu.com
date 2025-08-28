@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>PixelRuler — Exact Pixel Measurements</title>
+<style>
+  :root{--bg:#f6f8fb;--card:#ffffff;--muted:#6b7280;--accent:#0ea5a4}
+  *{box-sizing:border-box}
+  body{font-family:Inter,system-ui,Arial;background:var(--bg);margin:0;padding:18px;display:flex;justify-content:center}
+  .app{width:980px;background:var(--card);border-radius:12px;padding:16px;box-shadow:0 10px 30px rgba(2,6,23,0.06)}
+  header{display:flex;gap:12px;align-items:center}
+  h1{margin:0;font-size:18px}
+  .muted{color:var(--muted);font-size:13px}
+  .cols{display:grid;grid-template-columns:320px 1fr;gap:14px;margin-top:12px}
+  .panel{padding:12px;background:linear-gradient(180deg,rgba(2,6,23,0.02),transparent);border-radius:8px}
+  input,select,button{padding:8px;border-radius:8px;border:1px solid #e6edf3}
+  .controls{display:flex;flex-direction:column;gap:8px}
+  canvas{display:block;border-radius:6px;background:#111;width:100%;}
+  .list{max-height:220px;overflow:auto;padding:8px;background:#fbfdff;border-radius:6px;border:1px solid #eef2ff}
+  .item{padding:6px;border-bottom:1px dashed #eef2ff;font-size:13px}
+  .row{display:flex;gap:8px;align-items:center}
+  .btn{background:var(--accent);color:white;border:none;padding:8px;border-radius:8px;cursor:pointer}
+</style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <svg width="44" height="44" viewBox="0 0 24 24" fill="none"><rect width="24" height="24" rx="6" fill="#e6fffb"></rect><path d="M4 12h16" stroke="#0ea5a4" stroke-width="1.6" stroke-linecap="round"/></svg>
+      <div>
+        <h1>PixelRuler</h1>
+        <div class="muted">Measure exact pixel distances, angles and coordinates inside any image — lightweight and client-side.</div>
+      </div>
+    </header>
+
+    <div class="cols">
+      <div class="panel">
+        <div class="controls">
+          <label>Upload image</label>
+          <input id="file" type="file" accept="image/*" />
+
+          <label>Tool</label>
+          <select id="tool">
+            <option value="ruler">Ruler (pixel distance)</option>
+            <option value="point">Point (coordinates)</option>
+          </select>
+
+          <label>Add measurement</label>
+          <div class="row">
+            <button id="add" class="btn">Add</button>
+            <button id="clear" class="btn" style="background:#94a3b8">Clear</button>
+          </div>
+
+          <label>Export</label>
+          <div class="row">
+            <button id="exportCSV" class="btn">Export CSV</button>
+            <button id="copyJSON" class="btn" style="background:#64748b">Copy JSON</button>
+          </div>
+
+          <div style="margin-top:8px" class="muted">Measurements</div>
+          <div class="list" id="list"></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <div><strong>Canvas</strong><div class="muted">Click to place endpoints for a ruler or a point. Drag endpoints to adjust.</div></div>
+          <div class="muted">Zoom: <span id="zoomLabel">100%</span></div>
+        </div>
+        <div>
+          <canvas id="canvas" width="800" height="600"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+(function(){
+  const file = document.getElementById('file');
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+  const addBtn = document.getElementById('add');
+  const clearBtn = document.getElementById('clear');
+  const listEl = document.getElementById('list');
+  const toolSel = document.getElementById('tool');
+  const exportCSV = document.getElementById('exportCSV');
+  const copyJSON = document.getElementById('copyJSON');
+  const zoomLabel = document.getElementById('zoomLabel');
+
+  let img = new Image(); let zoom = 1;
+  let items = []; // {id,type:'ruler'|'point', x1,y1,x2,y2}
+  let placing = false; let temp = null; let drag = null; let idc = 1;
+
+  function fitToCanvas(){ const maxW=900, maxH=700; let w=img.width, h=img.height; const r=w/h; if(w>maxW){ w=maxW; h=Math.round(w/r);} if(h>maxH){ h=maxH; w=Math.round(h*r);} canvas.width = w; canvas.height = h; zoom = 1; zoomLabel.innerText = Math.round(zoom*100) + '%'; render(); }
+
+  file.addEventListener('change', e=>{ const f = e.target.files[0]; if(!f) return; const r = new FileReader(); r.onload=ev=>{ img.src = ev.target.result; img.onload = ()=>{ fitToCanvas(); }; }; r.readAsDataURL(f); });
+
+  // Pointer interactions
+  canvas.addEventListener('pointerdown', e=>{
+    const rect = canvas.getBoundingClientRect(); const x = (e.clientX - rect.left)/zoom; const y = (e.clientY - rect.top)/zoom;
+    // hit test endpoints
+    const hit = hitTestEndpoint(x,y);
+    if(hit){ drag = hit; return; }
+    const tool = toolSel.value;
+    if(tool==='ruler'){
+      if(!placing){ placing=true; temp={x1:x,y1:y,x2:null,y2:null}; }
+      else{ temp.x2 = x; temp.y2 = y; temp.id = idc++; items.push({id:temp.id,type:'ruler',...temp}); placing=false; temp=null; updateList(); }
+    } else {
+      // point
+      const id = idc++; items.push({id,type:'point',x1:x,y1:y}); updateList();
+    }
+    render();
+  });
+
+  canvas.addEventListener('pointermove', e=>{
+    if(drag){ const rect=canvas.getBoundingClientRect(); const x=(e.clientX-rect.left)/zoom; const y=(e.clientY-rect.top)/zoom; const it = items.find(i=>i.id===drag.id);
+      if(!it) { drag=null; return; }
+      if(drag.part==='a'){ it.x1 = x; it.y1 = y; } else if(drag.part==='b'){ it.x2 = x; it.y2 = y; } else if(drag.part==='p'){ it.x1 = x; it.y1 = y; }
+      updateList(); render(); }
+    else if(placing && temp){ const rect=canvas.getBoundingClientRect(); const x=(e.clientX-rect.left)/zoom; const y=(e.clientY-rect.top)/zoom; temp.x2 = x; temp.y2 = y; render(); }
+  });
+
+  canvas.addEventListener('pointerup', e=>{ drag = null; });
+
+  function hitTestEndpoint(x,y){ const r=8; for(const it of items){ if(it.type==='ruler'){ if(distance(x,y,it.x1,it.y1)<=r) return {id:it.id,part:'a'}; if(distance(x,y,it.x2,it.y2)<=r) return {id:it.id,part:'b'} } else { if(distance(x,y,it.x1,it.y1)<=r) return {id:it.id,part:'p'} } } return null; }
+
+  function render(){ ctx.clearRect(0,0,canvas.width,canvas.height); if(img.src) ctx.drawImage(img,0,0,canvas.width,canvas.height);
+    // draw existing
+    ctx.save(); ctx.scale(zoom,zoom);
+    for(const it of items){ if(it.type==='ruler'){ drawRuler(it); } else { drawPoint(it); } }
+    // temp
+    if(temp){ drawRuler(temp, true); }
+    ctx.restore(); }
+
+  function drawRuler(it, dashed){ ctx.save(); ctx.lineWidth = 2; ctx.strokeStyle = '#0ea5a4'; if(dashed) ctx.setLineDash([6,6]); ctx.beginPath(); ctx.moveTo(it.x1,it.y1); if(it.x2!=null) ctx.lineTo(it.x2,it.y2); ctx.stroke(); ctx.setLineDash([]);
+    // endpoints
+    drawHandle(it.x1,it.y1); if(it.x2!=null) drawHandle(it.x2,it.y2);
+    // label
+    if(it.x2!=null){ const px = Math.round(distance(it.x1,it.y1,it.x2,it.y2)); const ang = Math.round(Math.atan2(it.y2-it.y1,it.x2-it.x1)*180/Math.PI); ctx.fillStyle='#071633'; ctx.font='12px Inter,Arial'; ctx.fillText(`${px}px @ ${ang}°`, (it.x1+it.x2)/2 + 6, (it.y1+it.y2)/2 - 6); }
+    ctx.restore(); }
+
+  function drawPoint(it){ ctx.save(); drawHandle(it.x1,it.y1); ctx.fillStyle='#071633'; ctx.font='12px Inter,Arial'; ctx.fillText(`(${Math.round(it.x1)},${Math.round(it.y1)})`, it.x1 + 8, it.y1 - 8); ctx.restore(); }
+
+  function drawHandle(x,y){ ctx.beginPath(); ctx.fillStyle = '#fff'; ctx.strokeStyle='#0ea5a4'; ctx.lineWidth=2; ctx.arc(x,y,6,0,Math.PI*2); ctx.fill(); ctx.stroke(); }
+
+  function distance(x1,y1,x2,y2){ return Math.hypot((x2-x1),(y2-y1)); }
+
+  function updateList(){ listEl.innerHTML = ''; for(const it of items){ const div = document.createElement('div'); div.className='item'; if(it.type==='ruler'){ const px = Math.round(distance(it.x1,it.y1,it.x2,it.y2)); const ang = Math.round(Math.atan2(it.y2-it.y1,it.x2-it.x1)*180/Math.PI); div.innerText = `#${it.id} — ${px}px @ ${ang}° — (${Math.round(it.x1)},${Math.round(it.y1)}) ➜ (${Math.round(it.x2)},${Math.round(it.y2)})`; } else { div.innerText = `#${it.id} — Point (${Math.round(it.x1)},${Math.round(it.y1)})`; } listEl.appendChild(div); } }
+
+  addBtn.addEventListener('click', ()=>{ // toggle placing mode for selected tool
+    const t = toolSel.value; if(t==='ruler'){ placing = !placing; addBtn.innerText = placing ? 'Placing… Click second point' : 'Add'; } else { // point adds immediately on canvas click — show instruction
+      placing = false; alert('Point tool: click on the canvas to add a point'); } });
+
+  clearBtn.addEventListener('click', ()=>{ items = []; temp = null; placing=false; addBtn.innerText='Add'; updateList(); render(); });
+
+  exportCSV.addEventListener('click', ()=>{
+    const rows = [['id','type','x1','y1','x2','y2','pixels','angle']];
+    for(const it of items){ if(it.type==='ruler'){ const px = Math.round(distance(it.x1,it.y1,it.x2,it.y2)); const ang = Math.round(Math.atan2(it.y2-it.y1,it.x2-it.x1)*180/Math.PI); rows.push([it.id,'ruler',Math.round(it.x1),Math.round(it.y1),Math.round(it.x2),Math.round(it.y2),px,ang]); } else rows.push([it.id,'point',Math.round(it.x1),Math.round(it.y1),'','','']); }
+    const csv = rows.map(r=>r.join(',')).join('\n'); const blob = new Blob([csv],{type:'text/csv'}); const url = URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='pixelmeasurements.csv'; a.click(); URL.revokeObjectURL(url);
+  });
+
+  copyJSON.addEventListener('click', ()=>{ const out = {items: items.map(it=>({id:it.id,type:it.type,x1:Math.round(it.x1),y1:Math.round(it.y1),x2:it.x2?Math.round(it.x2):null,y2:it.y2?Math.round(it.y2):null}))}; navigator.clipboard.writeText(JSON.stringify(out,null,2)).then(()=>alert('Copied JSON to clipboard')); });
+
+  // zoom with wheel
+  canvas.addEventListener('wheel', e=>{ e.preventDefault(); const delta = -e.deltaY; const factor = delta>0 ? 1.1 : 0.9; zoom = Math.max(0.2, Math.min(4, zoom * factor)); // scale canvas via CSS transform instead of resizing for simplicity
+    canvas.style.transformOrigin = '0 0'; canvas.style.transform = `scale(${zoom})`; zoomLabel.innerText = Math.round(zoom*100) + '%'; });
+
+  // initial render
+  render();
+})();
+</script>
+</body>
+</html>

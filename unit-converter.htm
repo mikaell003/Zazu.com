@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Unit Converter</title>
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: linear-gradient(135deg, #6a11cb, #2575fc);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      color: #333;
+    }
+
+    .converter {
+      background: #fff;
+      padding: 30px;
+      border-radius: 20px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+      max-width: 450px;
+      width: 100%;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .converter::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: conic-gradient(#6a11cb, #2575fc, #6a11cb);
+      animation: spin 8s linear infinite;
+      z-index: 0;
+    }
+
+    .converter::after {
+      content: '';
+      position: absolute;
+      inset: 5px;
+      background: #fff;
+      border-radius: 16px;
+      z-index: 1;
+    }
+
+    @keyframes spin {
+      100% { transform: rotate(360deg); }
+    }
+
+    .converter > * {
+      position: relative;
+      z-index: 2;
+    }
+
+    h2 {
+      margin-bottom: 20px;
+      color: #2575fc;
+      font-weight: 700;
+    }
+
+    label {
+      display: block;
+      margin-top: 15px;
+      font-weight: 500;
+      color: #444;
+      text-align: left;
+    }
+
+    select, input {
+      width: 100%;
+      padding: 12px;
+      margin-top: 8px;
+      border: 1px solid #ccc;
+      border-radius: 10px;
+      font-size: 16px;
+      outline: none;
+      transition: 0.3s;
+    }
+
+    select:focus, input:focus {
+      border-color: #2575fc;
+      box-shadow: 0 0 8px rgba(37,117,252,0.4);
+    }
+
+    .swap-btn {
+      margin: 15px auto;
+      display: inline-block;
+      padding: 10px 20px;
+      background: #2575fc;
+      color: #fff;
+      border: none;
+      border-radius: 50px;
+      cursor: pointer;
+      transition: 0.3s;
+      font-size: 14px;
+    }
+
+    .swap-btn:hover {
+      background: #6a11cb;
+      transform: scale(1.05);
+    }
+
+    .result {
+      margin-top: 20px;
+      font-size: 20px;
+      font-weight: bold;
+      color: #6a11cb;
+      background: #f1f5ff;
+      padding: 15px;
+      border-radius: 12px;
+    }
+
+    .twist {
+      margin-top: 15px;
+      font-size: 14px;
+      font-style: italic;
+      color: #555;
+    }
+  </style>
+</head>
+<body>
+  <div class="converter">
+    <h2>⚡ Smart Unit Converter</h2>
+    
+    <label for="category">Choose Category:</label>
+    <select id="category"></select>
+
+    <label for="fromUnit">From:</label>
+    <select id="fromUnit"></select>
+
+    <label for="toUnit">To:</label>
+    <select id="toUnit"></select>
+
+    <label for="inputValue">Enter Value:</label>
+    <input type="number" id="inputValue" placeholder="Type a number...">
+
+    <button class="swap-btn" onclick="swapUnits()">🔄 Swap Units</button>
+
+    <div class="result" id="result">Start typing to convert...</div>
+
+    <div class="twist" id="twist"></div>
+  </div>
+
+  <script>
+    const units = {
+      length: ["Meters", "Kilometers", "Centimeters", "Millimeters", "Miles", "Yards", "Feet", "Inches"],
+      weight: ["Kilograms", "Grams", "Milligrams", "Pounds", "Ounces", "Tons"],
+      temperature: ["Celsius", "Fahrenheit", "Kelvin"],
+      time: ["Seconds", "Minutes", "Hours", "Days"],
+      area: ["Square Meters", "Square Kilometers", "Square Miles", "Acres", "Hectares"],
+      speed: ["Meters/Second", "Kilometers/Hour", "Miles/Hour", "Knots"]
+    };
+
+    const funFacts = {
+      length: "Did you know? The Great Wall of China is over 21,000 km long!",
+      weight: "Fun fact: A blue whale can weigh up to 180,000 kg!",
+      temperature: "Trivia: 56.7°C is the highest temperature ever recorded on Earth!",
+      time: "A year on Venus is shorter than its day!",
+      area: "Russia covers more than 17 million square kilometers!",
+      speed: "The fastest land animal, the cheetah, runs up to 120 km/h!"
+    };
+
+    const category = document.getElementById("category");
+    const fromUnit = document.getElementById("fromUnit");
+    const toUnit = document.getElementById("toUnit");
+    const resultBox = document.getElementById("result");
+    const twistBox = document.getElementById("twist");
+
+    function populateUnits() {
+      const selectedCategory = category.value;
+      fromUnit.innerHTML = "";
+      toUnit.innerHTML = "";
+
+      units[selectedCategory].forEach(unit => {
+        let option1 = document.createElement("option");
+        option1.value = unit;
+        option1.textContent = unit;
+        fromUnit.appendChild(option1);
+
+        let option2 = document.createElement("option");
+        option2.value = unit;
+        option2.textContent = unit;
+        toUnit.appendChild(option2);
+      });
+      twistBox.textContent = funFacts[selectedCategory];
+    }
+
+    function convert() {
+      let value = parseFloat(document.getElementById("inputValue").value);
+      let from = fromUnit.value;
+      let to = toUnit.value;
+      let result = 0;
+
+      if (isNaN(value)) {
+        resultBox.textContent = "Please enter a valid number.";
+        return;
+      }
+
+      const lengthFactors = {
+        Meters: 1,
+        Kilometers: 1000,
+        Centimeters: 0.01,
+        Millimeters: 0.001,
+        Miles: 1609.34,
+        Yards: 0.9144,
+        Feet: 0.3048,
+        Inches: 0.0254
+      };
+
+      const weightFactors = {
+        Kilograms: 1,
+        Grams: 0.001,
+        Milligrams: 0.000001,
+        Pounds: 0.453592,
+        Ounces: 0.0283495,
+        Tons: 1000
+      };
+
+      const timeFactors = {
+        Seconds: 1,
+        Minutes: 60,
+        Hours: 3600,
+        Days: 86400
+      };
+
+      const areaFactors = {
+        "Square Meters": 1,
+        "Square Kilometers": 1e6,
+        "Square Miles": 2.59e6,
+        Acres: 4046.86,
+        Hectares: 10000
+      };
+
+      const speedFactors = {
+        "Meters/Second": 1,
+        "Kilometers/Hour": 0.277778,
+        "Miles/Hour": 0.44704,
+        "Knots": 0.514444
+      };
+
+      if (category.value === "length") {
+        result = value * (lengthFactors[from] / lengthFactors[to]);
+      } else if (category.value === "weight") {
+        result = value * (weightFactors[from] / weightFactors[to]);
+      } else if (category.value === "temperature") {
+        if (from === to) result = value;
+        else if (from === "Celsius" && to === "Fahrenheit") result = (value * 9/5) + 32;
+        else if (from === "Fahrenheit" && to === "Celsius") result = (value - 32) * 5/9;
+        else if (from === "Celsius" && to === "Kelvin") result = value + 273.15;
+        else if (from === "Kelvin" && to === "Celsius") result = value - 273.15;
+        else if (from === "Fahrenheit" && to === "Kelvin") result = (value - 32) * 5/9 + 273.15;
+        else if (from === "Kelvin" && to === "Fahrenheit") result = (value - 273.15) * 9/5 + 32;
+      } else if (category.value === "time") {
+        result = value * (timeFactors[from] / timeFactors[to]);
+      } else if (category.value === "area") {
+        result = value * (areaFactors[from] / areaFactors[to]);
+      } else if (category.value === "speed") {
+        result = value * (speedFactors[from] / speedFactors[to]);
+      }
+
+      resultBox.textContent = `${value} ${from} = ${result.toFixed(4)} ${to}`;
+    }
+
+    function swapUnits() {
+      let temp = fromUnit.value;
+      fromUnit.value = toUnit.value;
+      toUnit.value = temp;
+      convert();
+    }
+
+    category.addEventListener("change", populateUnits);
+    document.getElementById("inputValue").addEventListener("input", convert);
+    fromUnit.addEventListener("change", convert);
+    toUnit.addEventListener("change", convert);
+
+    // Initialize
+    window.onload = () => {
+      Object.keys(units).forEach(cat => {
+        let option = document.createElement("option");
+        option.value = cat;
+        option.textContent = cat.charAt(0).toUpperCase() + cat.slice(1);
+        category.appendChild(option);
+      });
+      populateUnits();
+    };
+  </script>
+</body>
+</html>

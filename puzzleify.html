@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Batch Image Editor — Resize · Rename · Watermark · Compress · ZIP</title>
+<style>
+  :root{--bg:#0f1724;--card:#0b1220;--muted:#9fb0d1;--accent:#7c3aed}
+  *{box-sizing:border-box}
+  body{font-family:Inter,system-ui,Arial;background:linear-gradient(180deg,#071029,#071430);color:#e6eef8;margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+  .app{width:980px;max-width:100%;background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent), #071223;border-radius:12px;padding:18px}
+  header{display:flex;gap:12px;align-items:center}
+  header h1{margin:0;font-size:18px}
+  .grid{display:grid;grid-template-columns:360px 1fr;gap:18px;margin-top:12px}
+  .panel{background:rgba(255,255,255,0.02);padding:12px;border-radius:10px}
+  label{font-size:13px;color:var(--muted)}
+  input,select,textarea{width:100%;padding:8px;border-radius:8px;border:0;background:rgba(255,255,255,0.03);color:inherit}
+  .row{display:flex;gap:8px;align-items:center}
+  .btn{background:linear-gradient(90deg,var(--accent),#4c1d95);border:none;color:white;padding:10px 14px;border-radius:8px;cursor:pointer;font-weight:600}
+  .small{padding:8px 10px;font-size:13px}
+  .muted{color:var(--muted);font-size:13px}
+  .list{max-height:300px;overflow:auto;margin-top:8px}
+  .fileItem{padding:8px;border-radius:8px;background:rgba(255,255,255,0.02);margin-bottom:6px}
+  progress{width:100%;height:12px}
+</style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none"><rect width="24" height="24" rx="6" fill="#071430"></rect><path d="M7 16c1-2 4-7 10-8" stroke="#7c3aed" stroke-width="1.5" stroke-linecap="round"/></svg>
+      <div>
+        <h1>Batch Image Editor</h1>
+        <div class="muted">Resize · Rename · Watermark · Compress · Export ZIP — all in browser.</div>
+      </div>
+    </header>
+
+    <div class="grid">
+      <div class="panel">
+        <label>1) Select images</label>
+        <input id="files" type="file" accept="image/*" multiple />
+        <div class="list" id="fileList"></div>
+
+        <hr style="margin:10px 0;border:none;border-top:1px solid rgba(255,255,255,0.03)">
+
+        <label>2) Resize</label>
+        <div class="row">
+          <input id="resizeWidth" placeholder="Width (px) — leave empty to keep" />
+          <input id="resizeHeight" placeholder="Height (px) — leave empty to keep" />
+        </div>
+        <label class="muted">Maintain aspect ratio: <input id="keepRatio" type="checkbox" checked /></label>
+
+        <label style="margin-top:8px">3) Rename pattern</label>
+        <input id="renamePattern" value="image_{index}" placeholder="e.g. product_{index}" />
+        <div class="muted">Use <code>{index}</code> and <code>{name}</code> (original name without extension).</div>
+
+        <label style="margin-top:8px">4) Watermark</label>
+        <input id="watermarkText" placeholder="Watermark text (leave empty for none)" />
+        <div class="row">
+          <select id="wmPosition"><option value="br">Bottom-right</option><option value="bl">Bottom-left</option><option value="tr">Top-right</option><option value="tl">Top-left</option><option value="center">Center</option></select>
+          <input id="wmSize" type="number" value="24" style="width:90px" />
+        </div>
+
+        <label style="margin-top:8px">5) Compression (JPEG quality)</label>
+        <input id="quality" type="range" min="0.1" max="1" step="0.05" value="0.9" />
+        <div class="row"><div class="muted">Quality:</div><div id="qVal" class="muted">0.90</div></div>
+
+        <div style="margin-top:10px" class="row">
+          <button id="processBtn" class="btn">Process & Download ZIP</button>
+          <button id="clearBtn" class="btn small">Clear</button>
+        </div>
+
+        <div style="margin-top:8px"><progress id="progress" value="0" max="100" style="width:100%"></progress></div>
+        <div id="status" class="muted" style="margin-top:6px">Idle</div>
+
+      </div>
+
+      <div class="panel">
+        <h3>Preview / Logs</h3>
+        <div id="previewArea" style="min-height:360px"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <script>
+    const filesInput = document.getElementById('files');
+    const fileList = document.getElementById('fileList');
+    const previewArea = document.getElementById('previewArea');
+    const resizeWidth = document.getElementById('resizeWidth');
+    const resizeHeight = document.getElementById('resizeHeight');
+    const keepRatio = document.getElementById('keepRatio');
+    const renamePattern = document.getElementById('renamePattern');
+    const watermarkText = document.getElementById('watermarkText');
+    const wmPosition = document.getElementById('wmPosition');
+    const wmSize = document.getElementById('wmSize');
+    const quality = document.getElementById('quality');
+    const qVal = document.getElementById('qVal');
+    const processBtn = document.getElementById('processBtn');
+    const progressEl = document.getElementById('progress');
+    const status = document.getElementById('status');
+    const clearBtn = document.getElementById('clearBtn');
+
+    let files = [];
+
+    quality.addEventListener('input', ()=>{ qVal.innerText = parseFloat(quality.value).toFixed(2); });
+
+    filesInput.addEventListener('change', (e)=>{
+      files = Array.from(e.target.files);
+      renderFileList();
+    });
+
+    function renderFileList(){ fileList.innerHTML = ''; previewArea.innerHTML='';
+      files.forEach((f,i)=>{
+        const div = document.createElement('div'); div.className='fileItem'; div.innerText = `${i+1}. ${f.name} (${Math.round(f.size/1024)} KB)`; fileList.appendChild(div);
+        const img = document.createElement('img'); img.style.maxWidth='160px'; img.style.maxHeight='120px'; img.style.margin='6px'; img.src = URL.createObjectURL(f); previewArea.appendChild(img);
+      }); }
+
+    clearBtn.addEventListener('click', ()=>{ files = []; fileList.innerHTML=''; previewArea.innerHTML=''; filesInput.value=''; status.innerText='Cleared'; progressEl.value=0; });
+
+    processBtn.addEventListener('click', async ()=>{
+      if(files.length===0) return alert('Please select images first');
+      processBtn.disabled = true; status.innerText='Processing...'; progressEl.value=0;
+      const zip = new JSZip();
+      const total = files.length; let done = 0;
+
+      for(const [idx,file] of files.entries()){
+        try{
+          const blob = await fileToProcessedBlob(file, idx+1);
+          const originalName = file.name.replace(/\.[^.]+$/, '');
+          const ext = (quality.value < 1 ? 'jpg' : 'png');
+          const namePattern = renamePattern.value || '{name}_{index}';
+          const outName = namePattern.replace('{index}', idx+1).replace('{name}', originalName) + '.' + ext;
+          zip.file(outName, blob);
+        }catch(err){ console.error('processing error', err); }
+        done++; progressEl.value = Math.round((done/total)*100); status.innerText = `Processed ${done}/${total}`;
+        await new Promise(r=>setTimeout(r,50)); // give UI breath
+      }
+
+      status.innerText = 'Generating ZIP...';
+      const content = await zip.generateAsync({type:'blob'}, (meta)=>{ progressEl.value = Math.round(meta.percent); });
+      const url = URL.createObjectURL(content); const a = document.createElement('a'); a.href = url; a.download = 'images.zip'; a.click(); URL.revokeObjectURL(url);
+      status.innerText = 'Done'; processBtn.disabled = false; progressEl.value = 100;
+    });
+
+    async function fileToProcessedBlob(file, index){
+      // load image
+      const img = await loadImageFromFile(file);
+      // compute target size
+      let targetW = parseInt(resizeWidth.value) || img.width;
+      let targetH = parseInt(resizeHeight.value) || img.height;
+      if(keepRatio.checked){
+        if(resizeWidth.value && !resizeHeight.value){ targetH = Math.round(img.height * (targetW / img.width)); }
+        if(resizeHeight.value && !resizeWidth.value){ targetW = Math.round(img.width * (targetH / img.height)); }
+        // if both provided, aspect not preserved (user chose)
+      }
+      // create canvas
+      const canvas = document.createElement('canvas'); canvas.width = targetW; canvas.height = targetH; const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,targetW,targetH);
+      ctx.drawImage(img, 0, 0, targetW, targetH);
+
+      // watermark
+      const wm = (watermarkText.value || '').trim();
+      if(wm){ ctx.save(); const size = parseInt(wmSize.value)||24; ctx.font = `${size}px sans-serif`; ctx.globalAlpha = 0.6; ctx.fillStyle = '#000000'; ctx.textBaseline = 'bottom'; let x=10; let y=targetH-10; if(wmPosition.value==='br'){ x = targetW - 10 - ctx.measureText(wm).width; y = targetH - 10; }
+        if(wmPosition.value==='bl'){ x = 10; y = targetH - 10; }
+        if(wmPosition.value==='tr'){ x = targetW - 10 - ctx.measureText(wm).width; y = size + 10; }
+        if(wmPosition.value==='tl'){ x = 10; y = size + 10; }
+        if(wmPosition.value==='center'){ x = (targetW - ctx.measureText(wm).width)/2; y = (targetH + size)/2; }
+        // stroke for readability
+        ctx.lineWidth = Math.max(2, size/8); ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.strokeText(wm, x, y); ctx.fillStyle = 'rgba(0,0,0,0.8)'; ctx.fillText(wm, x, y); ctx.restore(); }
+
+      // export
+      const useJpeg = true; // prefer jpeg for compression even if transparent background is lost
+      const q = parseFloat(quality.value);
+      const blob = await new Promise(resolve=> canvas.toBlob(resolve, useJpeg ? 'image/jpeg' : 'image/png', q));
+      return blob;
+    }
+
+    function loadImageFromFile(file){ return new Promise((res,rej)=>{ const img = new Image(); const url = URL.createObjectURL(file); img.onload = ()=>{ URL.revokeObjectURL(url); res(img); }; img.onerror = (e)=>{ URL.revokeObjectURL(url); rej(e); }; img.src = url; }); }
+
+  </script>
+</body>
+</html>

@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>ZazuTrack — Time Tracker</title>
+  <style>
+    :root{
+      --bg:#071021; --panel:#0c1522; --muted:#98a8b9; --text:#eaf6ff; --accent:#6ee7ff; --accent2:#9dff6e;
+      --card:#0f1b2a; --glass: rgba(255,255,255,0.03); --radius:12px; --shadow: 0 8px 24px rgba(2,6,23,.6);
+      font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;background: radial-gradient(800px 500px at 10% 10%, #0b2340, var(--bg)); color:var(--text)}
+    .app{display:grid; grid-template-columns: 1fr 360px; gap:18px; padding:20px; height:100vh}
+
+    /* Left - main */
+    .main{background:linear-gradient(180deg,var(--panel), #081421); border-radius:16px; padding:18px; box-shadow:var(--shadow); display:flex; flex-direction:column; gap:12px}
+    .top{display:flex; align-items:center; justify-content:space-between; gap:12px}
+    .brand{display:flex; align-items:center; gap:12px}
+    .brand h1{margin:0;font-size:18px}
+    .controls{display:flex; gap:8px; align-items:center}
+    .btn{background:#0f2a42;border:1px solid rgba(255,255,255,.04); padding:8px 12px; border-radius:10px; cursor:pointer;color:var(--text)}
+    .btn.primary{background:linear-gradient(180deg,#114b66,#0f3b57); border-color:#13627f}
+    .btn.warn{background:linear-gradient(180deg,#6e2b2b,#501818)}
+    .search{background:#071827;border-radius:10px;padding:8px 10px;border:1px solid rgba(255,255,255,.03);display:flex;align-items:center;gap:8px}
+    .search input{background:transparent;border:0;outline:none;color:var(--text)}
+
+    .tracker{display:flex; gap:12px; align-items:center}
+    .timerCard{flex:1;background:var(--card); border-radius:12px; padding:14px; display:flex; flex-direction:column; gap:8px}
+    .bigTime{font-size:28px;font-weight:700}
+    .meta{display:flex; gap:8px; align-items:center}
+    select, input[type='text'], input[type='datetime-local']{background:transparent;border:1px solid rgba(255,255,255,.05); color:var(--text); padding:8px;border-radius:8px}
+
+    .quick{display:flex; gap:8px}
+
+    /* Entries */
+    .entries{background:linear-gradient(180deg,#071726,#05101a); padding:12px; border-radius:12px; height:360px; overflow:auto}
+    .entry{display:flex; justify-content:space-between; gap:12px; align-items:center; padding:8px; border-radius:10px; border:1px solid rgba(255,255,255,.02); margin-bottom:8px}
+    .entry .left{display:flex; gap:10px; align-items:center}
+    .dot{width:12px;height:12px;border-radius:50%}
+    .entry .meta small{display:block;color:var(--muted)}
+    .entry .actions{display:flex; gap:8px}
+
+    /* Right panel */
+    .side{display:flex; flex-direction:column; gap:12px; padding:18px; background:linear-gradient(180deg,#071321,#04101a); border-radius:16px}
+    .card{background:var(--card); padding:12px; border-radius:12px}
+    .stats{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+    .stat{background:var(--glass); padding:10px; border-radius:10px; text-align:center}
+    .small{font-size:12px;color:var(--muted)}
+
+    /* Chart */
+    .chart{display:flex; gap:12px; align-items:center}
+    svg.pie{width:160px;height:160px}
+    .legend{display:flex; flex-direction:column; gap:6px}
+    .leg{display:flex; gap:8px; align-items:center}
+    .bar{height:10px;width:18px;border-radius:3px}
+
+    footer{opacity:.7;font-size:12px;display:flex;justify-content:space-between;align-items:center}
+
+    /* responsive */
+    @media (max-width:1000px){ .app{grid-template-columns:1fr} .side{order:2} }
+
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="main">
+      <div class="top">
+        <div class="brand"><div style="font-size:20px">⏱️</div><h1>ZazuTrack — Time Tracker</h1></div>
+        <div class="controls">
+          <div class="search"><input id="search" placeholder="Search projects or notes" /></div>
+          <button class="btn" id="exportCsv">Export CSV</button>
+          <button class="btn" id="exportJson">Export JSON</button>
+          <label class="btn" for="importFile">Import<input id="importFile" type="file" accept="application/json" style="display:none"/></label>
+        </div>
+      </div>
+
+      <div class="tracker">
+        <div class="timerCard">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <div class="bigTime" id="timerDisplay">00:00:00</div>
+              <div class="small" id="timerSince">Not running</div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <button class="btn primary" id="startBtn">Start</button>
+              <button class="btn" id="stopBtn" disabled>Stop</button>
+            </div>
+          </div>
+
+          <div style="display:flex;gap:10px;align-items:center;margin-top:8px">
+            <select id="projectSelect"></select>
+            <input id="note" placeholder="Quick note (optional)" />
+            <button class="btn" id="addManual">+ Manual</button>
+          </div>
+
+          <div style="display:flex;gap:8px;margin-top:10px;align-items:center">
+            <div class="small">Quick categories:</div>
+            <div class="quick" id="quickCats"></div>
+          </div>
+        </div>
+
+        <div class="entries">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+            <strong>Entries</strong>
+            <div class="small">Showing <span id="entriesCount">0</span></div>
+          </div>
+          <div id="entriesList"></div>
+        </div>
+      </div>
+
+      <div class="card" style="display:flex;gap:12px;align-items:center;justify-content:space-between">
+        <div>
+          <div class="small">Range</div>
+          <input type="date" id="fromDate" /> to <input type="date" id="toDate" />
+          <button class="btn" id="applyRange">Apply</button>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center">
+          <div class="small">Auto idle stop</div>
+          <input type="checkbox" id="idleStop" />
+        </div>
+      </div>
+
+      <footer>
+        <div>Tip: Press <strong>Start</strong> to begin tracking. Use Manual to add past sessions.</div>
+        <div id="summaryText"></div>
+      </footer>
+    </div>
+
+    <aside class="side">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <strong>Overview</strong>
+          <button class="btn" id="resetAll">Reset</button>
+        </div>
+        <div class="stats" style="margin-top:10px">
+          <div class="stat"><div class="small">Total</div><div id="statTotal">0m</div></div>
+          <div class="stat"><div class="small">Today</div><div id="statToday">0m</div></div>
+          <div class="stat"><div class="small">Sessions</div><div id="statSessions">0</div></div>
+          <div class="stat"><div class="small">Avg</div><div id="statAvg">0m</div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <strong>Projects</strong>
+        <div id="projectsList" style="margin-top:8px;display:flex;flex-direction:column;gap:8px"></div>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <input id="newProjectInput" placeholder="New project name" />
+          <button class="btn" id="addProjectBtn">Add</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <strong>Activity</strong>
+        <div class="chart" style="margin-top:8px">
+          <svg class="pie" id="pie"></svg>
+          <div class="legend" id="legend"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <strong>Insights</strong>
+        <div id="insights" style="margin-top:8px;color:var(--muted)"></div>
+      </div>
+    </aside>
+  </div>
+
+<script>
+// --- State ---
+const STORAGE_KEY = 'zazutrack-v1'
+let state = { projects: [], entries: [], running: null }
+
+// --- Helpers ---
+function now(){ return new Date() }
+function formatHMS(ms){
+  const s = Math.floor(ms/1000); const h = Math.floor(s/3600); const m = Math.floor((s%3600)/60); const sec = s%60
+  return [h,m,sec].map(n=>String(n).padStart(2,'0')).join(':')
+}
+function minutes(ms){ return Math.round(ms/60000) }
+function clamp(v,min,max){ return Math.max(min, Math.min(max, v)) }
+
+// --- Persistence ---
+function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)) }
+function load(){ const raw = localStorage.getItem(STORAGE_KEY); if(raw) state = JSON.parse(raw) }
+
+// --- UI refs ---
+const startBtn = document.getElementById('startBtn'), stopBtn = document.getElementById('stopBtn')
+const timerDisplay = document.getElementById('timerDisplay'), timerSince = document.getElementById('timerSince')
+const projectSelect = document.getElementById('projectSelect'), entriesList = document.getElementById('entriesList')
+const entriesCount = document.getElementById('entriesCount'), projectsList = document.getElementById('projectsList')
+const newProjectInput = document.getElementById('newProjectInput'), addProjectBtn = document.getElementById('addProjectBtn')
+const statTotal = document.getElementById('statTotal'), statToday = document.getElementById('statToday'), statSessions = document.getElementById('statSessions'), statAvg = document.getElementById('statAvg')
+const pie = document.getElementById('pie'), legend = document.getElementById('legend'), insights = document.getElementById('insights')
+const exportCsv = document.getElementById('exportCsv'), exportJson = document.getElementById('exportJson'), importFile = document.getElementById('importFile')
+const addManual = document.getElementById('addManual'), noteInput = document.getElementById('note')
+const search = document.getElementById('search'), fromDate = document.getElementById('fromDate'), toDate = document.getElementById('toDate'), applyRange = document.getElementById('applyRange')
+const idleStop = document.getElementById('idleStop'), resetAll = document.getElementById('resetAll')
+
+// --- Boot ---
+load()
+if(!state.projects.length){ state.projects = [{id:'p0',name:'Work',color:'#6ee7ff'},{id:'p1',name:'Study',color:'#9dff6e'},{id:'p2',name:'Chores',color:'#ffb86b'}] }
+renderAll()
+
+// --- Timer loop ---
+let ticker = null
+function tick(){ if(!state.running) return; const nowTime = Date.now(); const ms = nowTime - state.running.start; timerDisplay.textContent = formatHMS(ms); timerSince.textContent = 'Started: ' + new Date(state.running.start).toLocaleString(); }
+function startTimer(projectId, note){ if(state.running) return; const start = Date.now(); state.running = {start, project: projectId, note: note||''}; save(); startBtn.disabled=true; stopBtn.disabled=false; tick(); ticker = setInterval(tick, 500) }
+function stopTimer(){ if(!state.running) return; const end = Date.now(); const entry = { id: 'e'+Date.now(), project: state.running.project, note: state.running.note, start: state.running.start, end }; state.entries.push(entry); state.running = null; clearInterval(ticker); ticker=null; startBtn.disabled=false; stopBtn.disabled=true; timerDisplay.textContent='00:00:00'; timerSince.textContent='Not running'; save(); renderAll(); }
+
+startBtn.addEventListener('click', ()=>{ const pid = projectSelect.value || state.projects[0].id; const note = noteInput.value; startTimer(pid,note) })
+stopBtn.addEventListener('click', ()=> stopTimer())
+
+// --- Manual add ---
+addManual.addEventListener('click', ()=>{
+  const pid = projectSelect.value || state.projects[0].id; const note = noteInput.value
+  const startStr = prompt('Start (YYYY-MM-DD HH:MM) — leave empty for now', '')
+  const endStr = prompt('End (YYYY-MM-DD HH:MM)', '')
+  if(!startStr || !endStr) return alert('Start and end required')
+  const s = new Date(startStr.replace(' ', 'T'))
+  const e = new Date(endStr.replace(' ', 'T'))
+  if(isNaN(s) || isNaN(e) || e<=s) return alert('Invalid times')
+  state.entries.push({ id:'e'+Date.now(), project:pid, note, start: s.getTime(), end: e.getTime() })
+  save(); renderAll();
+})
+
+// --- Projects ---
+function renderProjects(){ projectSelect.innerHTML=''; projectsList.innerHTML=''
+  state.projects.forEach(p=>{
+    const opt = document.createElement('option'); opt.value=p.id; opt.textContent=p.name; projectSelect.appendChild(opt)
+    const row = document.createElement('div'); row.style.display='flex'; row.style.justifyContent='space-between'; row.style.alignItems='center'
+    row.innerHTML = `<div style="display:flex;gap:8px;align-items:center"><div class='dot' style='background:${p.color}'></div><div>${p.name}</div></div>`
+    const btns = document.createElement('div'); btns.style.display='flex'; btns.style.gap='6px'
+    const del = document.createElement('button'); del.textContent='Del'; del.className='btn'; del.style.padding='6px'; del.onclick=()=>{ if(confirm('Delete project? entries will remain unassigned')){ state.projects = state.projects.filter(x=>x.id!==p.id); save(); renderAll() } }
+    btns.appendChild(del); row.appendChild(btns); projectsList.appendChild(row)
+  })
+}
+addProjectBtn.addEventListener('click', ()=>{
+  const name = newProjectInput.value.trim(); if(!name) return; const id = 'p'+Date.now(); const color = '#'+Math.floor(Math.random()*16777215).toString(16)
+  state.projects.push({id,name,color}); newProjectInput.value=''; save(); renderAll();
+})
+
+// --- Entries ---
+function renderEntries(filter = {}){
+  entriesList.innerHTML=''
+  const q = (search.value||'').toLowerCase()
+  const from = fromDate.value? new Date(fromDate.value).getTime(): null
+  const to = toDate.value? new Date(toDate.value).getTime() + 24*60*60*1000 -1: null
+  const list = state.entries
+    .filter(e=> !q || ((e.note||'')+getProjectName(e.project)).toLowerCase().includes(q))
+    .filter(e=> !from || e.end>=from)
+    .filter(e=> !to || e.start<=to)
+    .sort((a,b)=>b.start-a.start)
+
+  entriesCount.textContent = list.length
+  list.forEach(e=>{
+    const p = state.projects.find(x=>x.id===e.project) || {name:'(none)',color:'#666'}
+    const el = document.createElement('div'); el.className='entry'
+    const left = document.createElement('div'); left.className='left'
+    const dot = document.createElement('div'); dot.className='dot'; dot.style.background=p.color
+    const txt = document.createElement('div'); txt.innerHTML = `<strong>${p.name}</strong><div class='meta'><small>${new Date(e.start).toLocaleString()} → ${new Date(e.end).toLocaleString()}</small><small>${e.note||''}</small></div>`
+    left.appendChild(dot); left.appendChild(txt)
+    const dur = document.createElement('div'); dur.innerHTML = `<div style='text-align:right'><strong>${minutes(e.end - e.start)}m</strong><div class='small'>${formatHMS(e.end-e.start)}</div></div>`
+    const actions = document.createElement('div'); actions.className='actions'
+    const del = document.createElement('button'); del.className='btn'; del.textContent='Delete'; del.onclick=()=>{ if(confirm('Delete entry?')){ state.entries = state.entries.filter(x=>x.id!==e.id); save(); renderAll() } }
+    actions.appendChild(del)
+    el.appendChild(left); el.appendChild(dur); el.appendChild(actions); entriesList.appendChild(el)
+  })
+}
+
+function getProjectName(pid){ const p = state.projects.find(x=>x.id===pid); return p? p.name : '(none)'}
+
+// --- Stats & Chart ---
+function computeStats(){
+  const total = state.entries.reduce((s,e)=>s + Math.max(0, e.end - e.start), 0)
+  const todayStart = new Date(); todayStart.setHours(0,0,0,0)
+  const today = state.entries.filter(e=> e.end >= todayStart.getTime()).reduce((s,e)=>s + Math.max(0, e.end - e.start), 0)
+  const sessions = state.entries.length
+  const avg = sessions? Math.round(total/sessions/60000):0
+  return {total, today, sessions, avg}
+}
+
+function renderStats(){ const s = computeStats(); statTotal.textContent = minutes(s.total) + 'm'; statToday.textContent = minutes(s.today) + 'm'; statSessions.textContent = s.sessions; statAvg.textContent = s.avg + 'm' }
+
+function renderPie(){ // time per project
+  const map = {}
+  state.entries.forEach(e=>{ map[e.project] = (map[e.project]||0) + Math.max(0, e.end-e.start) })
+  const items = Object.keys(map).map(k=>({project:k,ms:map[k], name:getProjectName(k), color:(state.projects.find(p=>p.id===k)||{color:'#888'}).color}))
+  const total = items.reduce((s,i)=>s+i.ms,0)
+  pie.innerHTML=''; legend.innerHTML=''
+  if(total===0){ pie.innerHTML = `<text x='50%' y='50%' text-anchor='middle' fill='var(--muted)'>No data</text>`; return }
+  let angle= -Math.PI/2
+  const cx=80, cy=80, r=70
+  items.forEach(it=>{
+    const frac = it.ms/total; const a2 = angle + frac*Math.PI*2
+    const x1 = cx + r*Math.cos(angle), y1 = cy + r*Math.sin(angle)
+    const x2 = cx + r*Math.cos(a2), y2 = cy + r*Math.sin(a2)
+    const large = frac>0.5?1:0
+    const d = `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2} Z`
+    const path = document.createElementNS('http://www.w3.org/2000/svg','path'); path.setAttribute('d',d); path.setAttribute('fill', it.color); pie.appendChild(path)
+    angle = a2
+    const row = document.createElement('div'); row.className='leg'; row.innerHTML = `<div class='bar' style='background:${it.color}'></div><div>${it.name} — ${Math.round(it.ms/60000)}m</div>`; legend.appendChild(row)
+  })
+}
+
+function renderInsights(){
+  const byProject = {}
+  state.entries.forEach(e=>{ const name=getProjectName(e.project); byProject[name] = (byProject[name]||0) + (e.end-e.start) })
+  const top = Object.entries(byProject).sort((a,b)=>b[1]-a[1])[0]
+  const long = state.entries.slice().sort((a,b)=> (b.end-b.start)-(a.end-a.start))[0]
+  insights.innerHTML = ''
+  if(top) insights.innerHTML += `<div><strong>Most time:</strong> ${top[0]} — ${minutes(top[1])}m</div>`
+  if(long) insights.innerHTML += `<div style='margin-top:6px'><strong>Longest session:</strong> ${getProjectName(long.project)} — ${minutes(long.end-long.start)}m</div>`
+}
+
+// --- Render all ---
+function renderAll(){ renderProjects(); renderEntries(); renderStats(); renderPie(); renderInsights(); }
+
+// --- Export/Import ---
+exportJson.addEventListener('click', ()=>{
+  const blob = new Blob([JSON.stringify(state,null,2)], {type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='zazutrack.json'; a.click(); URL.revokeObjectURL(a.href)
+})
+importFile.addEventListener('change', async (e)=>{
+  const f = e.target.files[0]; if(!f) return; const text = await f.text(); try{ state = JSON.parse(text); save(); renderAll(); alert('Imported') }catch(err){ alert('Invalid file') }
+})
+exportCsv.addEventListener('click', ()=>{
+  const rows = [['project','note','start','end','minutes']]
+  state.entries.forEach(e=> rows.push([getProjectName(e.project), e.note||'', new Date(e.start).toISOString(), new Date(e.end).toISOString(), minutes(e.end-e.start)]))
+  const csv = rows.map(r=> r.map(c=> '"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n')
+  const blob = new Blob([csv], {type:'text/csv'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='zazutrack.csv'; a.click(); URL.revokeObjectURL(a.href)
+})
+
+// --- Search/range ---
+search.addEventListener('input', ()=> renderEntries())
+applyRange.addEventListener('click', ()=> renderEntries())
+
+// --- Reset ---
+resetAll.addEventListener('click', ()=>{ if(confirm('Reset all data?')){ state = {projects:[], entries:[], running:null}; save(); load(); renderAll(); alert('Reset') } })
+
+// --- Idle stop (basic) ---
+let idleTimer = null
+if(idleStop) idleStop.addEventListener('change', ()=>{
+  if(idleStop.checked){ startIdleWatch() } else { stopIdleWatch() }
+})
+function startIdleWatch(){ ['mousemove','keydown','touchstart'].forEach(ev=> window.addEventListener(ev, resetIdle)) ; resetIdle() }
+function stopIdleWatch(){ ['mousemove','keydown','touchstart'].forEach(ev=> window.removeEventListener(ev, resetIdle)) ; clearTimeout(idleTimer) }
+function resetIdle(){ if(idleTimer) clearTimeout(idleTimer); idleTimer = setTimeout(()=>{ if(state.running){ stopTimer(); alert('Stopped due to inactivity') } }, 1000*60*30) }
+
+// --- Autosave ticker (if running at load) ---
+if(state.running){ startBtn.disabled=true; stopBtn.disabled=false; ticker = setInterval(tick,500) }
+
+// Save on unload
+window.addEventListener('beforeunload', ()=> save())
+
+</script>
+</body>
+</html>

@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zazu's Decision Maker</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #6dd5ed, #2193b0);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background-color: rgba(255, 255, 255, 0.9);
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            width: 90%;
+            max-width: 500px;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .zazu-title {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        
+        .zazu-icon {
+            font-size: 32px;
+            margin-right: 10px;
+        }
+        
+        h1 {
+            color: #2193b0;
+            margin-bottom: 5px;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 25px;
+        }
+        
+        .input-area {
+            margin-bottom: 25px;
+        }
+        
+        textarea {
+            width: 100%;
+            height: 120px;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            font-size: 16px;
+            resize: none;
+            transition: border-color 0.3s;
+        }
+        
+        textarea:focus {
+            outline: none;
+            border-color: #6dd5ed;
+        }
+        
+        .placeholder {
+            color: #999;
+            text-align: left;
+            margin-top: 5px;
+            font-size: 14px;
+        }
+        
+        .button-group {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        
+        button {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        #pick-btn {
+            background-color: #6dd5ed;
+            color: white;
+            box-shadow: 0 4px 10px rgba(109, 213, 237, 0.4);
+        }
+        
+        #pick-btn:hover {
+            background-color: #2193b0;
+            transform: translateY(-2px);
+        }
+        
+        #clear-btn {
+            background-color: #f8f9fa;
+            color: #666;
+            border: 1px solid #ddd;
+        }
+        
+        #clear-btn:hover {
+            background-color: #e9ecef;
+        }
+        
+        .result-container {
+            min-height: 80px;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+        
+        .result {
+            font-size: 22px;
+            font-weight: bold;
+            color: #2193b0;
+            opacity: 0;
+            transform: scale(0.9);
+            transition: all 0.5s ease;
+        }
+        
+        .result.show {
+            opacity: 1;
+            transform: scale(1);
+        }
+        
+        .decisions {
+            margin-top: 20px;
+            font-size: 14px;
+            color: #888;
+        }
+        
+        .bird-animation {
+            margin-top: 20px;
+            height: 60px;
+            position: relative;
+        }
+        
+        .bird {
+            font-size: 40px;
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            opacity: 0;
+            transition: all 0.5s ease;
+        }
+        
+        .bird.fly-in {
+            opacity: 1;
+            top: 0;
+        }
+        
+        .bird.fly-out {
+            opacity: 0;
+            top: -50px;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        .pulse {
+            animation: pulse 0.5s ease-in-out;
+        }
+        
+        @media (max-width: 600px) {
+            .container {
+                padding: 20px;
+            }
+            
+            button {
+                padding: 10px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="zazu-title">
+            <div class="zazu-icon">🦜</div>
+            <h1>Zazu's Decision Maker</h1>
+        </div>
+        <p class="subtitle">Let Zazu help you make small decisions or pick random items from a list</p>
+        
+        <div class="input-area">
+            <textarea id="items-input" placeholder="Enter your options here, separated by commas or new lines..."></textarea>
+            <p class="placeholder">Example: Pizza, Sushi, Burger, Salad</p>
+        </div>
+        
+        <div class="button-group">
+            <button id="pick-btn">Pick Randomly</button>
+            <button id="clear-btn">Clear</button>
+        </div>
+        
+        <div class="result-container">
+            <div class="bird-animation">
+                <div class="bird">🦜</div>
+            </div>
+            <div id="result" class="result"></div>
+            <div id="decision-count" class="decisions">Zazu has helped with 0 decisions so far!</div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const itemsInput = document.getElementById('items-input');
+            const pickBtn = document.getElementById('pick-btn');
+            const clearBtn = document.getElementById('clear-btn');
+            const resultElement = document.getElementById('result');
+            const decisionCountElement = document.getElementById('decision-count');
+            const birdElement = document.querySelector('.bird');
+            
+            let decisionCount = parseInt(localStorage.getItem('zazuDecisionCount')) || 0;
+            decisionCountElement.textContent = `Zazu has helped with ${decisionCount} decisions so far!`;
+            
+            // Function to pick a random item
+            function pickRandomItem() {
+                const inputText = itemsInput.value.trim();
+                
+                if (!inputText) {
+                    resultElement.textContent = "Please enter some options first!";
+                    resultElement.classList.add('show');
+                    return;
+                }
+                
+                // Split by commas or new lines
+                const items = inputText.split(/[\n,]+/).map(item => item.trim()).filter(item => item !== '');
+                
+                if (items.length === 0) {
+                    resultElement.textContent = "Please enter valid options!";
+                    resultElement.classList.add('show');
+                    return;
+                }
+                
+                if (items.length === 1) {
+                    resultElement.textContent = "You only entered one option!";
+                    resultElement.classList.add('show');
+                    return;
+                }
+                
+                // Animate the bird
+                birdElement.classList.remove('fly-out');
+                birdElement.classList.add('fly-in');
+                
+                // Disable button during selection
+                pickBtn.disabled = true;
+                
+                // Animate the selection process
+                let iterations = 0;
+                const maxIterations = 20;
+                const interval = setInterval(() => {
+                    const randomIndex = Math.floor(Math.random() * items.length);
+                    resultElement.textContent = items[randomIndex];
+                    resultElement.classList.add('show');
+                    resultElement.classList.add('pulse');
+                    
+                    setTimeout(() => {
+                        resultElement.classList.remove('pulse');
+                    }, 100);
+                    
+                    iterations++;
+                    
+                    if (iterations >= maxIterations) {
+                        clearInterval(interval);
+                        
+                        // Final selection
+                        const finalIndex = Math.floor(Math.random() * items.length);
+                        resultElement.textContent = items[finalIndex];
+                        
+                        // Animate bird flying away
+                        setTimeout(() => {
+                            birdElement.classList.remove('fly-in');
+                            birdElement.classList.add('fly-out');
+                        }, 500);
+                        
+                        // Re-enable button
+                        pickBtn.disabled = false;
+                        
+                        // Update decision count
+                        decisionCount++;
+                        decisionCountElement.textContent = `Zazu has helped with ${decisionCount} decisions so far!`;
+                        localStorage.setItem('zazuDecisionCount', decisionCount);
+                    }
+                }, 100);
+            }
+            
+            // Function to clear the input and result
+            function clearAll() {
+                itemsInput.value = '';
+                resultElement.textContent = '';
+                resultElement.classList.remove('show');
+                birdElement.classList.remove('fly-in');
+                birdElement.classList.remove('fly-out');
+            }
+            
+            // Event listeners
+            pickBtn.addEventListener('click', pickRandomItem);
+            clearBtn.addEventListener('click', clearAll);
+            
+            // Allow Enter key to trigger random pick
+            itemsInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter' && e.ctrlKey) {
+                    pickRandomItem();
+                }
+            });
+        });
+    </script>
+</body>
+</html>

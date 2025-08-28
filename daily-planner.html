@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Daily Planner</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      max-width: 700px;
+      margin: 50px auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+      color: #333;
+    }
+    .task-input {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+    .task-input input, .task-input select {
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      font-size: 14px;
+    }
+    .task-input input {
+      flex: 1;
+      margin-right: 10px;
+    }
+    .task-input button {
+      padding: 10px 15px;
+      border: none;
+      border-radius: 5px;
+      background: #007BFF;
+      color: #fff;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    .task-input button:hover {
+      background: #0056b3;
+    }
+    .task-list {
+      list-style: none;
+      padding: 0;
+    }
+    .task-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #fafafa;
+      padding: 10px;
+      border: 1px solid #eee;
+      border-radius: 5px;
+      margin-bottom: 10px;
+    }
+    .task-item.done span {
+      text-decoration: line-through;
+      color: gray;
+    }
+    .task-item button {
+      margin-left: 10px;
+      border: none;
+      padding: 5px 10px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .done-btn {
+      background: #28a745;
+      color: white;
+    }
+    .delete-btn {
+      background: #dc3545;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Daily Planner</h1>
+    <div class="task-input">
+      <select id="time">
+        <option value="6 AM">6 AM</option>
+        <option value="7 AM">7 AM</option>
+        <option value="8 AM">8 AM</option>
+        <option value="9 AM">9 AM</option>
+        <option value="10 AM">10 AM</option>
+        <option value="11 AM">11 AM</option>
+        <option value="12 PM">12 PM</option>
+        <option value="1 PM">1 PM</option>
+        <option value="2 PM">2 PM</option>
+        <option value="3 PM">3 PM</option>
+        <option value="4 PM">4 PM</option>
+        <option value="5 PM">5 PM</option>
+        <option value="6 PM">6 PM</option>
+        <option value="7 PM">7 PM</option>
+        <option value="8 PM">8 PM</option>
+        <option value="9 PM">9 PM</option>
+        <option value="10 PM">10 PM</option>
+      </select>
+      <input type="text" id="task" placeholder="Enter your task...">
+      <button onclick="addTask()">Add</button>
+    </div>
+    <ul id="taskList" class="task-list"></ul>
+  </div>
+
+  <script>
+    const taskList = document.getElementById("taskList");
+
+    function loadTasks() {
+      const tasks = JSON.parse(localStorage.getItem("dailyTasks")) || [];
+      tasks.forEach(task => renderTask(task.time, task.text, task.done));
+    }
+
+    function saveTasks() {
+      const tasks = [];
+      document.querySelectorAll(".task-item").forEach(item => {
+        tasks.push({
+          time: item.querySelector("small").innerText,
+          text: item.querySelector("span").innerText,
+          done: item.classList.contains("done")
+        });
+      });
+      localStorage.setItem("dailyTasks", JSON.stringify(tasks));
+    }
+
+    function renderTask(time, text, done=false) {
+      const li = document.createElement("li");
+      li.className = "task-item";
+      if(done) li.classList.add("done");
+      li.innerHTML = `
+        <div>
+          <strong>${time}</strong> - <span>${text}</span><br>
+          <small>${time}</small>
+        </div>
+        <div>
+          <button class="done-btn" onclick="toggleDone(this)">✔</button>
+          <button class="delete-btn" onclick="deleteTask(this)">✖</button>
+        </div>
+      `;
+      taskList.appendChild(li);
+    }
+
+    function addTask() {
+      const time = document.getElementById("time").value;
+      const taskInput = document.getElementById("task");
+      const text = taskInput.value.trim();
+      if(!text) return;
+      renderTask(time, text);
+      saveTasks();
+      taskInput.value = "";
+    }
+
+    function toggleDone(btn) {
+      const item = btn.closest(".task-item");
+      item.classList.toggle("done");
+      saveTasks();
+    }
+
+    function deleteTask(btn) {
+      const item = btn.closest(".task-item");
+      item.remove();
+      saveTasks();
+    }
+
+    window.onload = loadTasks;
+  </script>
+</body>
+</html>

@@ -1,0 +1,1123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Photo Resizer</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #4361ee;
+            --secondary-color: #3f37c9;
+            --accent-color: #4895ef;
+            --light-color: #f8f9fa;
+            --dark-color: #212529;
+            --success-color: #4cc9f0;
+            --warning-color: #f72585;
+            --border-color: #dee2e6;
+            --card-bg: #ffffff;
+            --shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            color: var(--dark-color);
+            line-height: 1.6;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 15px;
+            color: var(--primary-color);
+            font-size: 2.5rem;
+            font-weight: 700;
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.1);
+            animation: fadeInDown 0.8s ease;
+        }
+
+        .app-description {
+            text-align: center;
+            margin-bottom: 30px;
+            color: var(--dark-color);
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+            font-size: 1.1rem;
+            opacity: 0.9;
+            animation: fadeIn 1s ease;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 15px;
+            box-shadow: var(--shadow);
+            padding: 30px;
+            margin-bottom: 30px;
+            transition: var(--transition);
+            animation: fadeInUp 0.8s ease;
+        }
+
+        .card:hover {
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+            transform: translateY(-5px);
+        }
+
+        .upload-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px;
+            border: 2px dashed var(--border-color);
+            border-radius: 12px;
+            margin-bottom: 30px;
+            background-color: rgba(255, 255, 255, 0.7);
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .upload-section::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(
+                to bottom right,
+                transparent 0%,
+                transparent 45%,
+                rgba(67, 97, 238, 0.1) 50%,
+                transparent 55%,
+                transparent 100%
+            );
+            animation: shine 3s infinite linear;
+            z-index: 0;
+        }
+
+        .upload-section:hover {
+            border-color: var(--primary-color);
+            background-color: rgba(255, 255, 255, 0.9);
+        }
+
+        .upload-section.drag-over {
+            border-color: var(--primary-color);
+            background-color: rgba(67, 97, 238, 0.05);
+        }
+
+        .upload-icon {
+            font-size: 60px;
+            color: var(--primary-color);
+            margin-bottom: 20px;
+            z-index: 1;
+            animation: pulse 2s infinite;
+        }
+
+        .upload-text {
+            margin-bottom: 20px;
+            font-weight: 500;
+            font-size: 1.2rem;
+            z-index: 1;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .btn {
+            background-color: var(--primary-color);
+            color: var(--light-color);
+            border: none;
+            padding: 12px 28px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: var(--transition);
+            margin-bottom: 15px;
+            z-index: 1;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 15px rgba(67, 97, 238, 0.3);
+        }
+
+        .btn i {
+            margin-right: 8px;
+        }
+
+        .btn:hover {
+            background-color: var(--secondary-color);
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(67, 97, 238, 0.4);
+        }
+
+        .btn:active {
+            transform: translateY(1px);
+        }
+
+        .or-text {
+            margin: 15px 0;
+            color: var(--dark-color);
+            font-weight: 500;
+            position: relative;
+            z-index: 1;
+        }
+
+        .or-text::before,
+        .or-text::after {
+            content: "";
+            position: absolute;
+            top: 50%;
+            width: 100px;
+            height: 1px;
+            background-color: var(--border-color);
+        }
+
+        .or-text::before {
+            right: 110%;
+        }
+
+        .or-text::after {
+            left: 110%;
+        }
+
+        .controls-section {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .control-group {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .control-group label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: 600;
+            color: var(--dark-color);
+            font-size: 0.95rem;
+        }
+
+        .input-field {
+            width: 100%;
+            padding: 14px 16px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 16px;
+            transition: var(--transition);
+            background-color: var(--light-color);
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.2);
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            margin: 20px 0;
+        }
+
+        .checkbox-group input {
+            margin-right: 10px;
+            width: 18px;
+            height: 18px;
+            accent-color: var(--primary-color);
+        }
+
+        .checkbox-group label {
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        .presets-section {
+            margin: 25px 0;
+        }
+
+        .presets-title {
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: var(--dark-color);
+            display: flex;
+            align-items: center;
+        }
+
+        .presets-title i {
+            margin-right: 10px;
+            color: var(--primary-color);
+        }
+
+        .preset-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .preset-btn {
+            background-color: var(--light-color);
+            color: var(--dark-color);
+            border: 1px solid var(--border-color);
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 0.9rem;
+            transition: var(--transition);
+        }
+
+        .preset-btn:hover {
+            background-color: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+            transform: translateY(-2px);
+        }
+
+        .preset-btn.active {
+            background-color: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        .preview-section {
+            display: none;
+            margin-bottom: 30px;
+            animation: fadeIn 0.8s ease;
+        }
+
+        .preview-title {
+            margin-bottom: 20px;
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: var(--dark-color);
+            display: flex;
+            align-items: center;
+        }
+
+        .preview-title i {
+            margin-right: 10px;
+            color: var(--primary-color);
+        }
+
+        .image-comparison {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .image-container {
+            flex: 1;
+            min-width: 300px;
+            text-align: center;
+            background-color: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+            transition: var(--transition);
+        }
+
+        .image-container:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+        }
+
+        .image-container img {
+            max-width: 100%;
+            max-height: 400px;
+            border-radius: 5px;
+            object-fit: contain;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .image-label {
+            margin: 10px 0 5px;
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+
+        .image-info {
+            font-size: 0.9rem;
+            color: var(--dark-color);
+            opacity: 0.8;
+        }
+
+        .action-btns {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 30px;
+            flex-wrap: wrap;
+        }
+
+        .download-btn {
+            background-color: var(--success-color);
+            box-shadow: 0 4px 15px rgba(76, 201, 240, 0.3);
+        }
+
+        .download-btn:hover {
+            background-color: #3ab7e0;
+            box-shadow: 0 6px 20px rgba(76, 201, 240, 0.4);
+        }
+
+        .reset-btn {
+            background-color: var(--warning-color);
+            box-shadow: 0 4px 15px rgba(247, 37, 133, 0.3);
+        }
+
+        .reset-btn:hover {
+            background-color: #e5177b;
+            box-shadow: 0 6px 20px rgba(247, 37, 133, 0.4);
+        }
+
+        .error-message {
+            color: #d32f2f;
+            background-color: rgba(211, 47, 47, 0.1);
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            display: none;
+            border-left: 4px solid #d32f2f;
+            animation: shake 0.5s ease;
+        }
+
+        .success-message {
+            color: #388e3c;
+            background-color: rgba(56, 142, 60, 0.1);
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            display: none;
+            border-left: 4px solid #388e3c;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 30px;
+            background-color: rgba(255, 255, 255, 0.8);
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+
+        .spinner {
+            border: 4px solid rgba(67, 97, 238, 0.1);
+            border-radius: 50%;
+            border-top: 4px solid var(--primary-color);
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        .loading-text {
+            font-weight: 500;
+            color: var(--dark-color);
+            margin-top: 10px;
+        }
+
+        .dimension-display {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 10px;
+            font-size: 0.9rem;
+        }
+
+        .dimension-value {
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        @keyframes shine {
+            0% { transform: translateX(-50%) translateY(-50%) rotate(0deg); }
+            100% { transform: translateX(50%) translateY(50%) rotate(360deg); }
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+            20%, 40%, 60%, 80% { transform: translateX(5px); }
+        }
+
+        @media (max-width: 768px) {
+            .controls-section {
+                flex-direction: column;
+            }
+            
+            .image-comparison {
+                flex-direction: column;
+            }
+
+            .upload-section {
+                padding: 30px 20px;
+            }
+
+            .or-text::before,
+            .or-text::after {
+                width: 60px;
+            }
+
+            .action-btns {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .btn {
+                width: 100%;
+                max-width: 300px;
+            }
+        }
+
+        /* Tooltip styles */
+        .tooltip {
+            position: relative;
+            display: inline-block;
+            cursor: pointer;
+            margin-left: 5px;
+        }
+
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 200px;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 10px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            transform: translateX(-50%);
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 0.85rem;
+            font-weight: normal;
+        }
+
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        /* Toggle switch */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+            margin-right: 10px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 24px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: var(--primary-color);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1><i class="fas fa-image"></i>Photo Resizer</h1>
+        <p class="app-description">
+            Easily resize your images to any dimension or choose from standard paper sizes. 
+            Perfect for printing, social media, or web use. Drag, drop, and download in seconds!
+        </p>
+
+        <div class="error-message" id="errorMessage"></div>
+        <div class="success-message" id="successMessage"></div>
+
+        <div class="card">
+            <div class="upload-section" id="dropArea">
+                <div class="upload-icon"><i class="fas fa-cloud-upload-alt"></i></div>
+                <p class="upload-text">Drag & drop your image here or</p>
+                <input type="file" id="fileInput" class="file-input" accept="image/*">
+                <button class="btn" onclick="document.getElementById('fileInput').click()">
+                    <i class="fas fa-folder-open"></i> Choose Image
+                </button>
+                <p class="or-text">or</p>
+                <p>Paste image from clipboard (Ctrl+V)</p>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="controls-section">
+                <div class="control-group">
+                    <label for="widthInput">
+                        Width (px)
+                        <span class="tooltip">
+                            <i class="fas fa-info-circle"></i>
+                            <span class="tooltiptext">Leave empty to calculate automatically based on height</span>
+                        </span>
+                    </label>
+                    <input type="number" id="widthInput" class="input-field" min="1" placeholder="Auto">
+                    <div class="dimension-display">
+                        <span>Inches:</span>
+                        <span class="dimension-value" id="widthInches">0</span>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label for="heightInput">
+                        Height (px)
+                        <span class="tooltip">
+                            <i class="fas fa-info-circle"></i>
+                            <span class="tooltiptext">Leave empty to calculate automatically based on width</span>
+                        </span>
+                    </label>
+                    <input type="number" id="heightInput" class="input-field" min="1" placeholder="Auto">
+                    <div class="dimension-display">
+                        <span>Inches:</span>
+                        <span class="dimension-value" id="heightInches">0</span>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label for="qualityInput">Quality (1-100)</label>
+                    <input type="range" id="qualityRange" min="1" max="100" value="90" class="input-field">
+                    <input type="number" id="qualityInput" min="1" max="100" value="90" class="input-field" style="margin-top: 5px;">
+                </div>
+
+                <div class="control-group">
+                    <label for="formatSelect">Output Format</label>
+                    <select id="formatSelect" class="input-field">
+                        <option value="original">Original</option>
+                        <option value="jpeg">JPEG</option>
+                        <option value="png">PNG</option>
+                        <option value="webp">WebP</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="checkbox-group">
+                <input type="checkbox" id="maintainAspect" checked>
+                <label for="maintainAspect">Maintain aspect ratio</label>
+            </div>
+
+            <div class="presets-section">
+                <h3 class="presets-title"><i class="fas fa-file-alt"></i> Paper Size Presets</h3>
+                <div class="preset-buttons" id="paperPresets">
+                    <button class="preset-btn" data-width="2550" data-height="3300">A4 (300dpi)</button>
+                    <button class="preset-btn" data-width="2550" data-height="3900">A3 (300dpi)</button>
+                    <button class="preset-btn" data-width="2480" data-height="3508">Letter (300dpi)</button>
+                    <button class="preset-btn" data-width="1011" data-height="637">Kenyan ID (300dpi)</button>
+                    <button class="preset-btn" data-width="1080" data-height="1080">Instagram Post</button>
+                    <button class="preset-btn" data-width="1080" data-height="1350">Instagram Story</button>
+                    <button class="preset-btn" data-width="1200" data-height="630">Facebook Post</button>
+                    <button class="preset-btn" data-width="1500" data-height="500">Twitter Header</button>
+                    <button class="preset-btn" data-width="1280" data-height="720">HD (720p)</button>
+                    <button class="preset-btn" data-width="1920" data-height="1080">Full HD (1080p)</button>
+                </div>
+            </div>
+
+            <div class="presets-section">
+                <h3 class="presets-title"><i class="fas fa-camera"></i> Photo Size Presets</h3>
+                <div class="preset-buttons" id="photoPresets">
+                    <button class="preset-btn" data-width="640" data-height="480">VGA (640×480)</button>
+                    <button class="preset-btn" data-width="800" data-height="600">SVGA (800×600)</button>
+                    <button class="preset-btn" data-width="1024" data-height="768">XGA (1024×768)</button>
+                    <button class="preset-btn" data-width="1600" data-height="1200">UXGA (1600×1200)</button>
+                    <button class="preset-btn" data-width="2048" data-height="1536">QXGA (2048×1536)</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="loading" id="loadingIndicator">
+            <div class="spinner"></div>
+            <p class="loading-text">Processing your image...</p>
+        </div>
+
+        <div class="card preview-section" id="previewSection">
+            <h3 class="preview-title"><i class="fas fa-eye"></i> Preview</h3>
+            <div class="image-comparison">
+                <div class="image-container">
+                    <div class="image-label">Original Image</div>
+                    <img id="originalImage" alt="Original image">
+                    <div class="image-info" id="originalInfo"></div>
+                </div>
+                <div class="image-container">
+                    <div class="image-label">Resized Image</div>
+                    <img id="resizedImage" alt="Resized image">
+                    <div class="image-info" id="resizedInfo"></div>
+                </div>
+            </div>
+            <div class="action-btns">
+                <button class="btn download-btn" id="downloadBtn">
+                    <i class="fas fa-download"></i> Download Resized Image
+                </button>
+                <button class="btn reset-btn" id="resetBtn">
+                    <i class="fas fa-redo"></i> Reset
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // DOM elements
+        const fileInput = document.getElementById('fileInput');
+        const dropArea = document.getElementById('dropArea');
+        const widthInput = document.getElementById('widthInput');
+        const heightInput = document.getElementById('heightInput');
+        const qualityInput = document.getElementById('qualityInput');
+        const qualityRange = document.getElementById('qualityRange');
+        const formatSelect = document.getElementById('formatSelect');
+        const maintainAspect = document.getElementById('maintainAspect');
+        const previewSection = document.getElementById('previewSection');
+        const originalImage = document.getElementById('originalImage');
+        const resizedImage = document.getElementById('resizedImage');
+        const originalInfo = document.getElementById('originalInfo');
+        const resizedInfo = document.getElementById('resizedInfo');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const errorMessage = document.getElementById('errorMessage');
+        const successMessage = document.getElementById('successMessage');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const paperPresets = document.getElementById('paperPresets');
+        const photoPresets = document.getElementById('photoPresets');
+        const widthInches = document.getElementById('widthInches');
+        const heightInches = document.getElementById('heightInches');
+
+        // Variables
+        let originalFile = null;
+        let originalImageData = null;
+        let aspectRatio = 1;
+        let dpi = 96; // Default DPI for screen (can be changed for print)
+
+        // Event listeners
+        fileInput.addEventListener('change', handleFileSelect);
+        dropArea.addEventListener('dragover', handleDragOver);
+        dropArea.addEventListener('dragleave', handleDragLeave);
+        dropArea.addEventListener('drop', handleDrop);
+        document.addEventListener('paste', handlePaste);
+        widthInput.addEventListener('input', handleDimensionChange);
+        heightInput.addEventListener('input', handleDimensionChange);
+        qualityInput.addEventListener('input', syncQualityInputs);
+        qualityRange.addEventListener('input', syncQualityInputs);
+        maintainAspect.addEventListener('change', handleMaintainAspectChange);
+        downloadBtn.addEventListener('click', downloadResizedImage);
+        resetBtn.addEventListener('click', resetApp);
+
+        // Add event listeners to all preset buttons
+        document.querySelectorAll('.preset-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                // Remove active class from all buttons in the same group
+                const parent = this.parentElement;
+                parent.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+                
+                // Add active class to clicked button
+                this.classList.add('active');
+                
+                // Set dimensions
+                const width = parseInt(this.dataset.width);
+                const height = parseInt(this.dataset.height);
+                
+                widthInput.value = width;
+                heightInput.value = height;
+                
+                // Calculate and display inches
+                updateInchesDisplay(width, height);
+                
+                // Resize image
+                resizeImage();
+            });
+        });
+
+        // Functions
+        function handleFileSelect(e) {
+            const file = e.target.files[0];
+            if (file) {
+                processImageFile(file);
+            }
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            dropArea.classList.add('drag-over');
+        }
+
+        function handleDragLeave(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            dropArea.classList.remove('drag-over');
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            dropArea.classList.remove('drag-over');
+            
+            const file = e.dataTransfer.files[0];
+            if (file && file.type.startsWith('image/')) {
+                processImageFile(file);
+            } else {
+                showError('Please select an image file');
+            }
+        }
+
+        function handlePaste(e) {
+            const items = e.clipboardData.items;
+            for (let i = 0; i < items.length; i++) {
+                if (items[i].type.startsWith('image/')) {
+                    const blob = items[i].getAsFile();
+                    processImageFile(blob);
+                    break;
+                }
+            }
+        }
+
+        function processImageFile(file) {
+            if (!file.type.startsWith('image/')) {
+                showError('Please select an image file');
+                return;
+            }
+
+            if (file.size > 20 * 1024 * 1024) { // 20MB limit
+                showError('Image size should be less than 20MB');
+                return;
+            }
+
+            originalFile = file;
+            const reader = new FileReader();
+
+            reader.onload = function(e) {
+                originalImageData = e.target.result;
+                displayOriginalImage(originalImageData);
+                calculateAspectRatio();
+                resetResizeControls();
+                previewSection.style.display = 'block';
+                showSuccess('Image loaded successfully!');
+            };
+
+            reader.readAsDataURL(file);
+        }
+
+        function displayOriginalImage(imageData) {
+            originalImage.src = imageData;
+            
+            const img = new Image();
+            img.onload = function() {
+                originalInfo.textContent = `${img.width} × ${img.height} pixels | ${formatFileSize(originalFile.size)}`;
+                updateInchesDisplay(img.width, img.height);
+            };
+            img.src = imageData;
+        }
+
+        function calculateAspectRatio() {
+            const img = new Image();
+            img.onload = function() {
+                aspectRatio = img.width / img.height;
+                widthInput.placeholder = img.width;
+                heightInput.placeholder = img.height;
+            };
+            img.src = originalImageData;
+        }
+
+        function resetResizeControls() {
+            widthInput.value = '';
+            heightInput.value = '';
+            qualityInput.value = 90;
+            qualityRange.value = 90;
+            formatSelect.value = 'original';
+            maintainAspect.checked = true;
+            
+            // Remove active class from all preset buttons
+            document.querySelectorAll('.preset-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+        }
+
+        function handleDimensionChange(e) {
+            if (!originalImageData) return;
+
+            if (maintainAspect.checked) {
+                if (e.target === widthInput && widthInput.value) {
+                    heightInput.value = Math.round(widthInput.value / aspectRatio);
+                } else if (e.target === heightInput && heightInput.value) {
+                    widthInput.value = Math.round(heightInput.value * aspectRatio);
+                }
+            }
+
+            // Update inches display
+            const width = widthInput.value ? parseInt(widthInput.value) : 0;
+            const height = heightInput.value ? parseInt(heightInput.value) : 0;
+            updateInchesDisplay(width, height);
+
+            // Remove active class from preset buttons when manually changing dimensions
+            if (e.target === widthInput || e.target === heightInput) {
+                document.querySelectorAll('.preset-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+            }
+
+            resizeImage();
+        }
+
+        function updateInchesDisplay(width, height) {
+            if (width && height) {
+                widthInches.textContent = (width / dpi).toFixed(2);
+                heightInches.textContent = (height / dpi).toFixed(2);
+            } else {
+                widthInches.textContent = '0';
+                heightInches.textContent = '0';
+            }
+        }
+
+        function handleMaintainAspectChange() {
+            if (maintainAspect.checked && widthInput.value && !heightInput.value) {
+                heightInput.value = Math.round(widthInput.value / aspectRatio);
+                resizeImage();
+            }
+        }
+
+        function syncQualityInputs(e) {
+            if (e.target === qualityInput) {
+                qualityRange.value = qualityInput.value;
+            } else {
+                qualityInput.value = qualityRange.value;
+            }
+        }
+
+        function resizeImage() {
+            if (!originalImageData) return;
+
+            loadingIndicator.style.display = 'block';
+            
+            // Use setTimeout to allow UI to update before heavy processing
+            setTimeout(() => {
+                try {
+                    const img = new Image();
+                    img.onload = function() {
+                        let newWidth = widthInput.value ? parseInt(widthInput.value) : img.width;
+                        let newHeight = heightInput.value ? parseInt(heightInput.value) : img.height;
+                        
+                        if (!widthInput.value && !heightInput.value) {
+                            newWidth = img.width;
+                            newHeight = img.height;
+                        } else if (maintainAspect.checked) {
+                            if (widthInput.value && !heightInput.value) {
+                                newHeight = Math.round(newWidth / aspectRatio);
+                                heightInput.value = newHeight;
+                            } else if (!widthInput.value && heightInput.value) {
+                                newWidth = Math.round(newHeight * aspectRatio);
+                                widthInput.value = newWidth;
+                            }
+                        }
+                        
+                        // Update inches display
+                        updateInchesDisplay(newWidth, newHeight);
+                        
+                        // Create canvas
+                        const canvas = document.createElement('canvas');
+                        canvas.width = newWidth;
+                        canvas.height = newHeight;
+                        const ctx = canvas.getContext('2d');
+                        
+                        // Draw image on canvas
+                        ctx.imageSmoothingQuality = 'high';
+                        ctx.drawImage(img, 0, 0, newWidth, newHeight);
+                        
+                        // Get output format
+                        let format = formatSelect.value;
+                        if (format === 'original') {
+                            format = originalFile.type.split('/')[1] || 'jpeg';
+                        }
+                        
+                        // Get quality
+                        const quality = parseInt(qualityInput.value) / 100;
+                        
+                        // Convert to data URL
+                        let mimeType;
+                        switch (format) {
+                            case 'jpeg': mimeType = 'image/jpeg'; break;
+                            case 'png': mimeType = 'image/png'; break;
+                            case 'webp': mimeType = 'image/webp'; break;
+                            default: mimeType = 'image/jpeg';
+                        }
+                        
+                        const resizedDataUrl = canvas.toDataURL(mimeType, quality);
+                        resizedImage.src = resizedDataUrl;
+                        
+                        // Calculate file size
+                        const fileSize = Math.round((resizedDataUrl.length * 3) / 4); // Approximate base64 size
+                        resizedInfo.textContent = `${newWidth} × ${newHeight} pixels | ${formatFileSize(fileSize)}`;
+                        
+                        loadingIndicator.style.display = 'none';
+                    };
+                    img.src = originalImageData;
+                } catch (error) {
+                    console.error('Error resizing image:', error);
+                    showError('An error occurred while resizing the image');
+                    loadingIndicator.style.display = 'none';
+                }
+            }, 100);
+        }
+
+        function downloadResizedImage() {
+            if (!resizedImage.src || resizedImage.src === originalImageData) {
+                showError('Please resize the image first');
+                return;
+            }
+            
+            const link = document.createElement('a');
+            let fileName = originalFile.name.split('.')[0] || 'resized-image';
+            let extension;
+            
+            switch (formatSelect.value) {
+                case 'jpeg': extension = 'jpg'; break;
+                case 'png': extension = 'png'; break;
+                case 'webp': extension = 'webp'; break;
+                case 'original': 
+                    extension = originalFile.name.split('.').pop() || 'jpg';
+                    break;
+                default: extension = 'jpg';
+            }
+            
+            fileName += `-resized.${extension}`;
+            
+            link.href = resizedImage.src;
+            link.download = fileName;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            showSuccess('Image downloaded successfully!');
+        }
+
+        function resetApp() {
+            originalFile = null;
+            originalImageData = null;
+            fileInput.value = '';
+            previewSection.style.display = 'none';
+            originalImage.src = '';
+            resizedImage.src = '';
+            originalInfo.textContent = '';
+            resizedInfo.textContent = '';
+            hideError();
+            hideSuccess();
+            resetResizeControls();
+            widthInches.textContent = '0';
+            heightInches.textContent = '0';
+        }
+
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.style.display = 'block';
+            setTimeout(hideError, 5000);
+        }
+
+        function hideError() {
+            errorMessage.style.display = 'none';
+        }
+
+        function showSuccess(message) {
+            successMessage.textContent = message;
+            successMessage.style.display = 'block';
+            setTimeout(hideSuccess, 3000);
+        }
+
+        function hideSuccess() {
+            successMessage.style.display = 'none';
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' bytes';
+            else if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+            else return (bytes / 1048576).toFixed(1) + ' MB';
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Creative Collage Maker</title>
+<style>
+  :root{--bg:#0f1724;--card:#0b1220;--muted:#9fb0d1;--accent:#7c3aed}
+  *{box-sizing:border-box}
+  body{font-family:Inter,system-ui,Arial;background:linear-gradient(180deg,#071029,#071430);color:#e6eef8;margin:0;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:18px}
+  .app{width:1200px;max-width:100%;display:grid;grid-template-columns:320px 1fr;gap:18px}
+  .panel{background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent), #071223;padding:16px;border-radius:12px}
+  h1{margin:0 0 8px 0;font-size:18px}
+  .muted{color:var(--muted);font-size:13px}
+  .controls{display:flex;flex-direction:column;gap:10px}
+  input[type=file]{display:block}
+  .toolbar{display:flex;gap:8px;flex-wrap:wrap}
+  button{background:linear-gradient(90deg,var(--accent),#4c1d95);border:none;color:white;padding:10px;border-radius:8px;cursor:pointer}
+  button.ghost{background:transparent;border:1px solid rgba(255,255,255,0.06)}
+  #stageWrap{background:#071225;border-radius:10px;padding:10px;min-height:640px;display:flex;align-items:center;justify-content:center}
+  #stage{position:relative;width:1000px;height:600px;background:#fff;border-radius:8px;overflow:hidden;touch-action:none}
+  .photo{position:absolute;top:0;left:0;transform-origin:center center;touch-action:none;user-select:none}
+  .frame{position:absolute;inset:0;pointer-events:none}
+  .handle{position:absolute;width:14px;height:14px;background:rgba(255,255,255,0.95);border-radius:3px;border:2px solid rgba(0,0,0,0.6);box-shadow:0 4px 10px rgba(0,0,0,0.4);}
+  .handle.rotate{right:-22px;top:50%;transform:translateY(-50%);cursor:grab}
+  .handle.resize{right:-8px;bottom:-8px;cursor:nwse-resize}
+  .selected{outline:2px dashed rgba(124,58,237,0.8)}
+  .layerList{max-height:220px;overflow:auto;background:rgba(255,255,255,0.02);padding:8px;border-radius:6px}
+  .layerItem{padding:6px;border-radius:6px;cursor:pointer}
+  .layerItem.active{background:rgba(255,255,255,0.03)}
+  .footer{color:var(--muted);font-size:13px;margin-top:8px}
+</style>
+</head>
+<body>
+  <div class="app">
+    <div class="panel">
+      <h1>Creative Collage Maker</h1>
+      <div class="muted">Combine images into collages — drag, resize, rotate, add frames and export a flattened image.</div>
+
+      <div class="controls" style="margin-top:12px">
+        <div>
+          <label class="muted">Add images</label>
+          <input id="files" type="file" accept="image/*" multiple />
+        </div>
+
+        <div>
+          <label class="muted">Preset frames</label>
+          <div class="toolbar">
+            <button id="frameNone" class="ghost">None</button>
+            <button id="framePolaroid">Polaroid</button>
+            <button id="frameFilm">Film Strip</button>
+            <button id="frameBorder" class="ghost">Border</button>
+          </div>
+        </div>
+
+        <div>
+          <label class="muted">Background</label>
+          <div class="toolbar">
+            <button id="bgWhite" class="ghost">White</button>
+            <button id="bgBlack" class="ghost">Black</button>
+            <button id="bgPattern" class="ghost">Pattern</button>
+            <input id="bgColor" type="color" value="#ffffff" style="width:48px;height:36px;border-radius:6px;border:none" />
+          </div>
+        </div>
+
+        <div>
+          <label class="muted">Actions</label>
+          <div class="toolbar">
+            <button id="bringForward">Bring Forward</button>
+            <button id="sendBack">Send Back</button>
+            <button id="delete">Delete</button>
+            <button id="export">Export PNG</button>
+            <button id="clear" class="ghost">Clear All</button>
+          </div>
+        </div>
+
+        <div>
+          <label class="muted">Layers</label>
+          <div class="layerList" id="layers"></div>
+        </div>
+
+        <div class="footer">Tip: Tap/click an image to select. Use the rotate handle or corner handle to resize. Export creates a flattened PNG.</div>
+      </div>
+    </div>
+
+    <div class="panel" id="stageWrap">
+      <div id="stage" tabindex="0" aria-label="Collage stage"></div>
+    </div>
+  </div>
+
+<script>
+// Simple, dependency-free collage editor. Single-file.
+const stage = document.getElementById('stage');
+const filesInput = document.getElementById('files');
+const layersEl = document.getElementById('layers');
+let items = []; // {id,el,img,w,h,x,y,scale,rot}
+let selectedId = null;
+let idCounter = 1;
+
+// background helpers
+const setStageBg = (v) => { stage.style.background = v; }
+
+document.getElementById('bgWhite').addEventListener('click', ()=>setStageBg('#ffffff'));
+document.getElementById('bgBlack').addEventListener('click', ()=>setStageBg('#000000'));
+document.getElementById('bgPattern').addEventListener('click', ()=>setStageBg('repeating-linear-gradient(45deg,#f8fafc 0 10px,#e6edf7 10px 20px)'));
+document.getElementById('bgColor').addEventListener('input', (e)=>setStageBg(e.target.value));
+
+document.getElementById('frameNone').addEventListener('click', ()=>removeFrame());
+document.getElementById('framePolaroid').addEventListener('click', ()=>applyFrame('polaroid'));
+document.getElementById('frameFilm').addEventListener('click', ()=>applyFrame('film'));
+document.getElementById('frameBorder').addEventListener('click', ()=>applyFrame('border'));
+
+function applyFrame(type){ removeFrame(); const f = document.createElement('div'); f.className='frame'; f.dataset.type = type; if(type==='polaroid'){ f.style.background = 'linear-gradient(#fff,#fff)'; f.style.boxShadow='0 8px 40px rgba(2,6,23,0.6)'; f.style.border='20px solid #fff'; }
+  if(type==='film'){ f.style.background='linear-gradient(#000,#000)'; f.style.boxShadow='inset 0 0 0 6px rgba(255,255,255,0.06)'; }
+  if(type==='border'){ f.style.outline='8px solid rgba(255,255,255,0.06)'; }
+  stage.appendChild(f);
+}
+function removeFrame(){ const existing = stage.querySelector('.frame'); if(existing) existing.remove(); }
+
+filesInput.addEventListener('change', (e)=>{
+  const files = Array.from(e.target.files);
+  files.forEach(file=>{
+    const reader = new FileReader();
+    reader.onload = ev=>{ createItem(ev.target.result); }
+    reader.readAsDataURL(file);
+  });
+});
+
+function createItem(src){ const img = new Image(); img.onload = ()=>{
+  const id = idCounter++;
+  const el = document.createElement('div'); el.className='photo'; el.style.width = img.width/2 + 'px'; el.style.height = img.height/2 + 'px'; el.style.left = (20 + Math.random()*200) + 'px'; el.style.top = (20 + Math.random()*200) + 'px'; el.style.backgroundImage = `url(${src})`; el.style.backgroundSize = 'cover'; el.style.backgroundPosition = 'center'; el.dataset.id = id;
+
+  // handles
+  const rotate = document.createElement('div'); rotate.className='handle rotate'; el.appendChild(rotate);
+  const resize = document.createElement('div'); resize.className='handle resize'; el.appendChild(resize);
+
+  // state
+  const item = { id, el, img, w: img.width/2, h: img.height/2, x: parseFloat(el.style.left), y: parseFloat(el.style.top), scale:1, rot:0 };
+
+  el.addEventListener('pointerdown', (ev)=>{ if(ev.target === rotate || ev.target === resize) return; selectItem(id); startDrag(ev, item); });
+  rotate.addEventListener('pointerdown', (ev)=>{ ev.stopPropagation(); startRotate(ev, item); });
+  resize.addEventListener('pointerdown', (ev)=>{ ev.stopPropagation(); startResize(ev, item); });
+
+  stage.appendChild(el); items.push(item); refreshLayers(); selectItem(id);
+}; img.src = src; }
+
+// Selection
+function selectItem(id){ selectedId = id; items.forEach(it=>{ if(it.id===id){ it.el.classList.add('selected'); it.el.style.zIndex = 1000; } else { it.el.classList.remove('selected'); it.el.style.zIndex = ''; }}); refreshLayers(); }
+
+// Drag
+let pointerState = null; // {type:'drag'|'rotate'|'resize', item, startX,startY, startXpos, startYpos, startRot, startScale}
+function startDrag(e,item){ e.preventDefault(); stage.setPointerCapture(e.pointerId); pointerState = { type:'drag', item, startX:e.clientX, startY:e.clientY, startXpos:item.x, startYpos:item.y }; window.addEventListener('pointermove', onPointerMove); window.addEventListener('pointerup', onPointerUp); }
+function onPointerMove(e){ if(!pointerState) return; const it = pointerState.item; if(pointerState.type==='drag'){ const dx = e.clientX - pointerState.startX; const dy = e.clientY - pointerState.startY; it.x = pointerState.startXpos + dx; it.y = pointerState.startYpos + dy; it.el.style.left = it.x + 'px'; it.el.style.top = it.y + 'px'; }
+  else if(pointerState.type==='rotate'){ const rect = pointerState.item.el.getBoundingClientRect(); const cx = rect.left + rect.width/2; const cy = rect.top + rect.height/2; const ang = Math.atan2(e.clientY - cy, e.clientX - cx) * 180 / Math.PI; const rot = ang - pointerState.startRot; pointerState.item.rot = rot; pointerState.item.el.style.transform = `rotate(${rot}deg) scale(${pointerState.item.scale})`; }
+  else if(pointerState.type==='resize'){ const rect = pointerState.item.el.getBoundingClientRect(); const startW = rect.width; const startH = rect.height; const dx = e.clientX - pointerState.startX; const dy = e.clientY - pointerState.startY; const newW = Math.max(30, startW + dx); const newH = Math.max(30, startH + dy); pointerState.item.w = newW; pointerState.item.h = newH; pointerState.item.el.style.width = newW + 'px'; pointerState.item.el.style.height = newH + 'px'; }
+}
+function onPointerUp(e){ if(!pointerState) return; stage.releasePointerCapture(e.pointerId); // finalize
+  // normalize transform style (keep translate via left/top)
+  if(pointerState.type==='rotate'){ pointerState.item.el.style.transform = `rotate(${pointerState.item.rot}deg) scale(${pointerState.item.scale})`; }
+  pointerState = null; window.removeEventListener('pointermove', onPointerMove); window.removeEventListener('pointerup', onPointerUp); refreshLayers(); }
+
+// Rotate
+function startRotate(e,item){ e.preventDefault(); stage.setPointerCapture(e.pointerId); const rect = item.el.getBoundingClientRect(); const cx = rect.left + rect.width/2; const cy = rect.top + rect.height/2; const startAng = Math.atan2(e.clientY - cy, e.clientX - cx) * 180 / Math.PI; pointerState = { type:'rotate', item, startX:e.clientX, startY:e.clientY, startRot: startAng - item.rot }; window.addEventListener('pointermove', onPointerMove); window.addEventListener('pointerup', onPointerUp); }
+
+// Resize
+function startResize(e,item){ e.preventDefault(); stage.setPointerCapture(e.pointerId); pointerState = { type:'resize', item, startX:e.clientX, startY:e.clientY }; window.addEventListener('pointermove', onPointerMove); window.addEventListener('pointerup', onPointerUp); }
+
+// Layers list
+function refreshLayers(){ layersEl.innerHTML = ''; for(let i = items.length-1;i>=0;i--){ const it = items[i]; const div = document.createElement('div'); div.className='layerItem' + (it.id===selectedId ? ' active' : ''); div.innerText = `Image ${it.id}`; div.addEventListener('click', ()=>{ selectItem(it.id); }); layersEl.appendChild(div); }}
+
+// Bring forward / send back / delete
+document.getElementById('bringForward').addEventListener('click', ()=>{ if(!selectedId) return; const idx = items.findIndex(i=>i.id===selectedId); if(idx>0){ const [it] = items.splice(idx,1); items.splice(idx-1,0,it); reorderDom(); refreshLayers(); }});
+document.getElementById('sendBack').addEventListener('click', ()=>{ if(!selectedId) return; const idx = items.findIndex(i=>i.id===selectedId); if(idx>-1 && idx < items.length-1){ const [it] = items.splice(idx,1); items.push(it); reorderDom(); refreshLayers(); }});
+document.getElementById('delete').addEventListener('click', ()=>{ if(!selectedId) return; const idx = items.findIndex(i=>i.id===selectedId); if(idx>-1){ items[idx].el.remove(); items.splice(idx,1); selectedId=null; refreshLayers(); }});
+
+document.getElementById('clear').addEventListener('click', ()=>{ items.forEach(i=>i.el.remove()); items = []; selectedId = null; refreshLayers(); });
+
+function reorderDom(){ // render items in order
+  stage.querySelectorAll('.photo, .frame').forEach(n=>n.remove()); // remove existing photos but keep frame re-applied later
+  // re-add frame if present
+  const frame = document.querySelector('.frame'); if(frame){ stage.appendChild(frame); }
+  items.forEach(it=> stage.appendChild(it.el)); }
+
+// Export: draw onto offscreen canvas
+document.getElementById('export').addEventListener('click', async ()=>{
+  // create canvas
+  const rect = stage.getBoundingClientRect(); const w = stage.clientWidth; const h = stage.clientHeight;
+  const out = document.createElement('canvas'); out.width = w; out.height = h; const ctx = out.getContext('2d');
+  // background
+  // read computed background
+  const bg = window.getComputedStyle(stage).background;
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,w,h); // default
+  // draw items in order
+  for(const it of items.slice().reverse()){ // items array order is bottom->top? we maintain top last; to match visual, draw in reverse
+    // draw image with transforms
+    const img = it.img; const el = it.el; const left = parseFloat(el.style.left); const top = parseFloat(el.style.top); const width = el.offsetWidth; const height = el.offsetHeight; // compute center
+    ctx.save(); ctx.translate(left + width/2, top + height/2);
+    // get rotation from transform
+    const rot = it.rot * Math.PI/180 || 0; ctx.rotate(rot); ctx.drawImage(img, -width/2, -height/2, width, height); ctx.restore();
+  }
+  // frames: draw frame if present by cloning style (simple border)
+  const frameEl = stage.querySelector('.frame'); if(frameEl){ // draw a white border if polaroid
+    if(frameEl.dataset.type==='polaroid'){
+      ctx.save(); ctx.fillStyle='#fff'; ctx.fillRect(0,0,w,h); ctx.restore();
+      // now redraw images on top (we already drew them) — for polaroid we want border around, so do nothing extra
+    }
+  }
+  // export
+  const dataUrl = out.toDataURL('image/png'); const a = document.createElement('a'); a.href = dataUrl; a.download = 'collage.png'; a.click();
+});
+
+// simple keyboard shortcuts
+window.addEventListener('keydown', (e)=>{
+  if(e.key === 'Delete' || e.key === 'Backspace'){ document.getElementById('delete').click(); }
+});
+
+// ensure stage is focusable for keyboard
+stage.addEventListener('keydown', (e)=>{});
+
+</script>
+</body>
+</html>

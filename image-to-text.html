@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Photo Puzzle Generator</title>
+<style>
+  :root{--bg:#0f1724;--card:#0b1220;--muted:#9fb0d1;--accent:#7c3aed}
+  *{box-sizing:border-box}
+  body{font-family:Inter, system-ui, Arial, sans-serif;background:#0b1220;color:#e6eef8;margin:0;min-height:100vh;padding:20px;display:flex;align-items:flex-start;justify-content:center}
+  .app{width:1100px;max-width:100%;display:grid;grid-template-columns:320px 1fr;gap:18px}
+  .panel{background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent), #071223;padding:16px;border-radius:12px}
+  h1{margin:0 0 8px 0;font-size:18px}
+  .muted{color:var(--muted);font-size:13px}
+  .controls{display:flex;flex-direction:column;gap:10px}
+  label{font-size:13px}
+  input[type=range]{width:100%}
+  button{background:linear-gradient(90deg,var(--accent),#4c1d95);border:none;color:white;padding:10px;border-radius:8px;cursor:pointer}
+  #boardWrap{background:#071225;border-radius:10px;padding:10px;display:flex;align-items:center;justify-content:center;min-height:560px}
+  .board{position:relative;display:block;touch-action:none}
+  .piece{position:absolute;background-repeat:no-repeat;background-size:contain;cursor:grab;border-radius:4px;box-shadow:0 6px 20px rgba(2,6,23,0.6);transition:transform .18s ease, left .18s ease, top .18s ease}
+  .piece.locked{cursor:default;box-shadow:0 2px 6px rgba(0,0,0,0.6)}
+  .toolbar{display:flex;gap:8px;flex-wrap:wrap}
+  .small{padding:8px 10px;background:rgba(255,255,255,0.03);border-radius:8px;color:var(--muted);border:none}
+  .footer{margin-top:10px;color:var(--muted);font-size:13px}
+</style>
+</head>
+<body>
+  <div class="app">
+    <div class="panel">
+      <h1>Photo Puzzle Generator</h1>
+      <div class="muted">Turn any photo into draggable puzzle pieces that snap into place.</div>
+
+      <div class="controls" style="margin-top:12px">
+        <div>
+          <label>Upload image</label><br>
+          <input id="fileInput" type="file" accept="image/*">
+        </div>
+
+        <div>
+          <label>Grid: <span id="gridLabel">4 × 4</span></label>
+          <input id="gridRange" type="range" min="2" max="10" value="4">
+        </div>
+
+        <div>
+          <label>Shuffle strength: <span id="shuffleVal">200</span> px</label>
+          <input id="shuffleRange" type="range" min="20" max="600" value="200">
+        </div>
+
+        <div class="toolbar">
+          <button id="generateBtn">Generate Pieces</button>
+          <button id="shuffleBtn">Shuffle</button>
+          <button id="solveBtn">Solve</button>
+          <button id="resetBtn" class="small">Reset</button>
+        </div>
+
+        <div class="muted">Tip: Drag a piece close to its correct position to snap it into place. Works on desktop and touch.</div>
+      </div>
+
+      <div class="footer">Built with HTML/CSS/JS — no libraries. Want jigsaw-shaped pieces, rotation, or scoring? Ask and I'll add them.</div>
+    </div>
+
+    <div class="panel" id="boardWrap">
+      <div id="board" class="board" aria-live="polite"></div>
+    </div>
+  </div>
+
+<script>
+  const fileInput = document.getElementById('fileInput');
+  const board = document.getElementById('board');
+  const gridRange = document.getElementById('gridRange');
+  const gridLabel = document.getElementById('gridLabel');
+  const shuffleRange = document.getElementById('shuffleRange');
+  const shuffleVal = document.getElementById('shuffleVal');
+  const generateBtn = document.getElementById('generateBtn');
+  const shuffleBtn = document.getElementById('shuffleBtn');
+  const solveBtn = document.getElementById('solveBtn');
+  const resetBtn = document.getElementById('resetBtn');
+
+  let img = new Image();
+  let pieces = [];
+  let rows = 4, cols = 4;
+  let pieceW = 0, pieceH = 0;
+  let boardW = 800, boardH = 600;
+  let zIndexCounter = 1;
+  let snapThreshold = 30; // pixels
+
+  gridRange.addEventListener('input', ()=>{ gridLabel.innerText = gridRange.value + ' × ' + gridRange.value; rows = cols = parseInt(gridRange.value); });
+  shuffleRange.addEventListener('input', ()=>{ shuffleVal.innerText = shuffleRange.value; });
+
+  fileInput.addEventListener('change', e=>{
+    const f = e.target.files[0]; if(!f) return;
+    const reader = new FileReader();
+    reader.onload = ev => { img.src = ev.target.result; img.onload = ()=>{ fitBoardToImage(); } }
+    reader.readAsDataURL(f);
+  });
+
+  function fitBoardToImage(){
+    // Limit max dimensions while preserving aspect
+    const maxW = 900, maxH = 700;
+    let w = img.width, h = img.height;
+    const ratio = w/h;
+    if(w > maxW){ w = maxW; h = Math.round(w/ratio); }
+    if(h > maxH){ h = maxH; w = Math.round(h*ratio); }
+    boardW = w; boardH = h;
+    board.style.width = boardW + 'px'; board.style.height = boardH + 'px';
+    board.innerHTML = '';
+  }
+
+  function clearPieces(){ pieces = []; board.innerHTML = ''; }
+
+  function generatePieces(){
+    if(!img.src) return alert('Please upload an image first');
+    clearPieces();
+    pieceW = Math.floor(boardW / cols); pieceH = Math.floor(boardH / rows);
+
+    // Create container background (optional: show full image faintly)
+    board.style.backgroundImage = `url(${img.src})`;
+    board.style.backgroundSize = `${boardW}px ${boardH}px`;
+    board.style.backgroundPosition = '0 0';
+
+    for(let r=0;r<rows;r++){
+      for(let c=0;c<cols;c++){
+        const piece = document.createElement('div');
+        piece.className = 'piece';
+        piece.dataset.r = r; piece.dataset.c = c;
+        piece.style.width = pieceW + 'px';
+        piece.style.height = pieceH + 'px';
+        piece.style.left = (c*pieceW) + 'px';
+        piece.style.top = (r*pieceH) + 'px';
+        piece.style.backgroundImage = `url(${img.src})`;
+        piece.style.backgroundSize = `${boardW}px ${boardH}px`;
+        piece.style.backgroundPosition = `-${c*pieceW}px -${r*pieceH}px`;
+        piece.style.touchAction = 'none';
+        piece.setAttribute('aria-grabbed','false');
+
+        // store correct position
+        piece.correctLeft = c*pieceW; piece.correctTop = r*pieceH;
+        piece.locked = false;
+
+        // initial shuffle position (random around board)
+        const margin = parseInt(shuffleRange.value);
+        const randX = Math.random()*(boardW - pieceW);
+        const randY = Math.random()*(boardH - pieceH);
+        // put pieces scattered outside sometimes
+        const offX = (Math.random()-0.5)*margin;
+        const offY = (Math.random()-0.5)*margin;
+        piece.style.left = Math.min(Math.max(0, piece.correctLeft + offX), boardW-pieceW) + 'px';
+        piece.style.top = Math.min(Math.max(0, piece.correctTop + offY), boardH-pieceH) + 'px';
+
+        addDragHandlers(piece);
+        board.appendChild(piece);
+        pieces.push(piece);
+      }
+    }
+  }
+
+  function addDragHandlers(piece){
+    let offsetX = 0, offsetY = 0, startX=0, startY=0;
+    function onPointerDown(e){
+      if(piece.locked) return;
+      piece.setPointerCapture(e.pointerId);
+      startX = e.clientX; startY = e.clientY;
+      const rect = piece.getBoundingClientRect();
+      const boardRect = board.getBoundingClientRect();
+      offsetX = startX - rect.left; offsetY = startY - rect.top;
+      piece.style.transition = 'none';
+      piece.style.zIndex = ++zIndexCounter;
+      piece.setAttribute('aria-grabbed','true');
+      window.addEventListener('pointermove', onPointerMove);
+      window.addEventListener('pointerup', onPointerUp);
+    }
+    function onPointerMove(e){
+      const boardRect = board.getBoundingClientRect();
+      let x = e.clientX - boardRect.left - offsetX;
+      let y = e.clientY - boardRect.top - offsetY;
+      // keep inside board
+      x = Math.max(0, Math.min(boardW - pieceW, x));
+      y = Math.max(0, Math.min(boardH - pieceH, y));
+      piece.style.left = x + 'px'; piece.style.top = y + 'px';
+    }
+    function onPointerUp(e){
+      piece.releasePointerCapture(e.pointerId);
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+      piece.style.transition = '';
+      piece.setAttribute('aria-grabbed','false');
+      // check snapping
+      const curLeft = parseFloat(piece.style.left); const curTop = parseFloat(piece.style.top);
+      const dx = curLeft - piece.correctLeft; const dy = curTop - piece.correctTop;
+      if(Math.hypot(dx,dy) < snapThreshold){
+        // snap
+        piece.style.left = piece.correctLeft + 'px'; piece.style.top = piece.correctTop + 'px';
+        piece.classList.add('locked'); piece.locked = true; piece.style.zIndex = 0;
+        checkSolved();
+      }
+    }
+
+    piece.addEventListener('pointerdown', onPointerDown);
+  }
+
+  function shufflePieces(){
+    const margin = parseInt(shuffleRange.value);
+    pieces.forEach(p=>{
+      if(p.locked) return;
+      const offX = (Math.random()-0.5)*margin*2;
+      const offY = (Math.random()-0.5)*margin*2;
+      const nx = Math.min(Math.max(0, p.correctLeft + offX), boardW-pieceW);
+      const ny = Math.min(Math.max(0, p.correctTop + offY), boardH-pieceH);
+      p.style.left = nx + 'px'; p.style.top = ny + 'px';
+      p.locked = false; p.classList.remove('locked');
+    });
+  }
+
+  function solvePuzzle(){
+    pieces.forEach(p=>{
+      p.style.left = p.correctLeft + 'px'; p.style.top = p.correctTop + 'px';
+      p.locked = true; p.classList.add('locked');
+    });
+  }
+
+  function resetBoard(){
+    board.style.backgroundImage = '';
+    clearPieces();
+  }
+
+  function checkSolved(){
+    const allLocked = pieces.length > 0 && pieces.every(p=>p.locked === true);
+    if(allLocked){
+      setTimeout(()=>{ alert('🎉 Puzzle solved!'); }, 100);
+    }
+  }
+
+  // Buttons
+  generateBtn.addEventListener('click', ()=>{ generatePieces(); });
+  shuffleBtn.addEventListener('click', ()=>{ shufflePieces(); });
+  solveBtn.addEventListener('click', ()=>{ solvePuzzle(); });
+  resetBtn.addEventListener('click', ()=>{ resetBoard(); });
+
+  // keyboard accessibility: arrow keys to nudge selected piece (bonus)
+  let selected = null;
+  board.addEventListener('click', e=>{
+    if(e.target.classList.contains('piece')){ selected = e.target; } else selected = null;
+  });
+  window.addEventListener('keydown', e=>{
+    if(!selected) return;
+    const step = e.shiftKey ? 10 : 1;
+    let l = parseFloat(selected.style.left); let t = parseFloat(selected.style.top);
+    if(e.key === 'ArrowLeft') { selected.style.left = Math.max(0,l-step)+'px'; }
+    if(e.key === 'ArrowRight') { selected.style.left = Math.min(boardW-pieceW,l+step)+'px'; }
+    if(e.key === 'ArrowUp') { selected.style.top = Math.max(0,t-step)+'px'; }
+    if(e.key === 'ArrowDown') { selected.style.top = Math.min(boardH-pieceH,t+step)+'px'; }
+  });
+
+  // initialize UI values
+  gridLabel.innerText = rows + ' × ' + cols;
+  shuffleVal.innerText = shuffleRange.value;
+
+  // small helper: allow double-click to quick-snap a piece
+  board.addEventListener('dblclick', e=>{
+    if(e.target.classList.contains('piece')){
+      const p = e.target; p.style.left = p.correctLeft + 'px'; p.style.top = p.correctTop + 'px'; p.locked = true; p.classList.add('locked'); checkSolved();
+    }
+  });
+
+</script>
+</body>
+</html>
+        

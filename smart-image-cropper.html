@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>📐 Smart Image Cropper</title>
+  <style>
+    body { font-family: 'Poppins', sans-serif; margin: 0; padding: 0; background: #f4f4f9; text-align: center; }
+    header { background: #0077ff; color: white; padding: 15px; }
+    h1 { margin: 0; }
+    canvas { border: 2px dashed #333; max-width: 100%; cursor: crosshair; margin-top: 10px; }
+    .controls { margin-top: 10px; }
+    button.action { background: #0077ff; color: white; margin: 5px; padding: 8px 15px; border: none; border-radius: 8px; cursor: pointer; }
+    button.action:hover { background: #005fcc; }
+    input[type=file] { margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>📐 Smart Image Cropper</h1>
+    <p>Upload, crop, and download your image easily</p>
+  </header>
+
+  <input type="file" id="uploadCrop" accept="image/*" />
+  <canvas id="canvasCrop"></canvas>
+  <div class="controls">
+    <button class="action" id="cropBtn">Crop</button>
+    <button class="action" id="downloadCrop">Download</button>
+  </div>
+
+  <script>
+    const uploadCrop = document.getElementById('uploadCrop');
+    const canvasCrop = document.getElementById('canvasCrop');
+    const ctxCrop = canvasCrop.getContext('2d');
+    let imgCrop = new Image();
+    let startX, startY, endX, endY, isDrawing = false;
+    let croppedImage;
+
+    uploadCrop.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = evt => {
+        imgCrop.onload = () => {
+          canvasCrop.width = imgCrop.width;
+          canvasCrop.height = imgCrop.height;
+          ctxCrop.drawImage(imgCrop, 0, 0);
+        };
+        imgCrop.src = evt.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    canvasCrop.addEventListener('mousedown', e => {
+      startX = e.offsetX; startY = e.offsetY; isDrawing = true;
+    });
+
+    canvasCrop.addEventListener('mousemove', e => {
+      if (!isDrawing) return;
+      endX = e.offsetX; endY = e.offsetY;
+      ctxCrop.drawImage(imgCrop, 0, 0);
+      ctxCrop.strokeStyle = 'red';
+      ctxCrop.lineWidth = 2;
+      ctxCrop.strokeRect(startX, startY, endX - startX, endY - startY);
+    });
+
+    canvasCrop.addEventListener('mouseup', () => { isDrawing = false; });
+
+    document.getElementById('cropBtn').addEventListener('click', () => {
+      if (startX && endX) {
+        const width = endX - startX;
+        const height = endY - startY;
+        const cropped = ctxCrop.getImageData(startX, startY, width, height);
+        canvasCrop.width = width;
+        canvasCrop.height = height;
+        ctxCrop.putImageData(cropped, 0, 0);
+        croppedImage = canvasCrop.toDataURL('image/png');
+      }
+    });
+
+    document.getElementById('downloadCrop').addEventListener('click', () => {
+      if (!croppedImage) return alert("Please crop an image first.");
+      const link = document.createElement('a');
+      link.href = croppedImage;
+      link.download = 'cropped.png';
+      link.click();
+    });
+  </script>
+</body>
+</html>

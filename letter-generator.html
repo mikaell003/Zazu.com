@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Application Letter Generator</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #2c3e50;
+        }
+
+        .form-section, .preview-section {
+            margin-bottom: 30px;
+        }
+
+        fieldset {
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        legend {
+            padding: 0 10px;
+            font-weight: bold;
+            color: #3498db;
+            font-size: 1.1em;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #555;
+        }
+
+        input, textarea, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            transition: border 0.3s;
+        }
+
+        input:focus, textarea:focus, select:focus {
+            border-color: #3498db;
+            outline: none;
+        }
+
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+            margin-right: 10px;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        .btn-download {
+            background-color: #2ecc71;
+        }
+
+        .btn-download:hover {
+            background-color: #27ae60;
+        }
+
+        .btn-copy {
+            background-color: #9b59b6;
+        }
+
+        .btn-copy:hover {
+            background-color: #8e44ad;
+        }
+
+        .letter-preview {
+            background: white;
+            padding: 30px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            font-family: 'Times New Roman', Times, serif;
+            line-height: 1.6;
+            white-space: pre-line;
+        }
+
+        .letter-preview p {
+            margin-bottom: 15px;
+        }
+
+        .letter-preview .date {
+            text-align: right;
+            margin-bottom: 20px;
+        }
+
+        .letter-preview .signature {
+            margin-top: 40px;
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            z-index: 1000;
+            display: none;
+        }
+
+        .spinner {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #3498db;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+            button {
+                width: 100%;
+                margin-bottom: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1><i class="fas fa-envelope-open-text"></i> Application Letter Generator</h1>
+        
+        <div class="form-section">
+            <form id="letter-form">
+                <fieldset>
+                    <legend><i class="fas fa-user"></i> Your Information</legend>
+                    <div class="form-group">
+                        <label for="your-name">Full Name</label>
+                        <input type="text" id="your-name" placeholder="John Doe" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="your-address">Address</label>
+                        <input type="text" id="your-address" placeholder="123 Main St, City, Country">
+                    </div>
+                    <div class="form-group">
+                        <label for="your-email">Email</label>
+                        <input type="email" id="your-email" placeholder="john.doe@example.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="your-phone">Phone</label>
+                        <input type="tel" id="your-phone" placeholder="+1234567890">
+                    </div>
+                </fieldset>
+
+                <fieldset>
+                    <legend><i class="fas fa-briefcase"></i> Employer Information</legend>
+                    <div class="form-group">
+                        <label for="employer-name">Hiring Manager / Company Name</label>
+                        <input type="text" id="employer-name" placeholder="Jane Smith / Tech Corp Inc." required>
+                    </div>
+                    <div class="form-group">
+                        <label for="company-address">Company Address</label>
+                        <input type="text" id="company-address" placeholder="456 Business Ave, City, Country">
+                    </div>
+                    <div class="form-group">
+                        <label for="job-title">Job Title You're Applying For</label>
+                        <input type="text" id="job-title" placeholder="Software Developer" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="job-reference">Job Reference (if any)</label>
+                        <input type="text" id="job-reference" placeholder="Job ID: DEV-2023">
+                    </div>
+                </fieldset>
+
+                <fieldset>
+                    <legend><i class="fas fa-edit"></i> Letter Content</legend>
+                    <div class="form-group">
+                        <label for="opening-line">Opening Line</label>
+                        <select id="opening-line">
+                            <option value="I am excited to apply for">I am excited to apply for...</option>
+                            <option value="I am writing to express my interest in">I am writing to express my interest in...</option>
+                            <option value="With great enthusiasm, I apply for">With great enthusiasm, I apply for...</option>
+                            <option value="custom">Custom (write below)</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="custom-opening-group" style="display: none;">
+                        <label for="custom-opening">Custom Opening</label>
+                        <input type="text" id="custom-opening" placeholder="Enter your custom opening line">
+                    </div>
+                    <div class="form-group">
+                        <label for="letter-body">Why You're a Good Fit</label>
+                        <textarea id="letter-body" placeholder="Highlight your skills, experience, and enthusiasm for the role. Keep it concise (3-4 paragraphs)." required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="closing-line">Closing Line</label>
+                        <select id="closing-line">
+                            <option value="I look forward to the opportunity to discuss my application further.">Standard</option>
+                            <option value="Thank you for your time and consideration. I hope to hear from you soon.">Polite</option>
+                            <option value="I am eager to bring my skills to your team and would welcome the chance to interview.">Enthusiastic</option>
+                            <option value="custom">Custom (write below)</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="custom-closing-group" style="display: none;">
+                        <label for="custom-closing">Custom Closing</label>
+                        <input type="text" id="custom-closing" placeholder="Enter your custom closing line">
+                    </div>
+                </fieldset>
+
+                <button type="submit" id="generate-letter"><i class="fas fa-magic"></i> Generate Letter</button>
+            </form>
+        </div>
+
+        <div class="preview-section" id="preview-section" style="display: none;">
+            <h2><i class="fas fa-eye"></i> Letter Preview</h2>
+            <div class="letter-preview" id="letter-preview"></div>
+            <button class="btn-download" id="download-pdf"><i class="fas fa-file-pdf"></i> Download as PDF</button>
+            <button class="btn-copy" id="copy-text"><i class="fas fa-copy"></i> Copy to Clipboard</button>
+        </div>
+    </div>
+
+    <div class="loading-overlay" id="loading-overlay">
+        <div class="spinner"></div>
+        <p>Generating PDF...</p>
+    </div>
+
+    <div id="pdf-export" style="position: absolute; left: -9999px;"></div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const { jsPDF } = window.jspdf;
+            const form = document.getElementById('letter-form');
+            const previewSection = document.getElementById('preview-section');
+            const letterPreview = document.getElementById('letter-preview');
+            const loadingOverlay = document.getElementById('loading-overlay');
+            const pdfExport = document.getElementById('pdf-export');
+            const openingLineSelect = document.getElementById('opening-line');
+            const closingLineSelect = document.getElementById('closing-line');
+            const customOpeningGroup = document.getElementById('custom-opening-group');
+            const customClosingGroup = document.getElementById('custom-closing-group');
+
+            // Toggle custom opening/closing fields
+            openingLineSelect.addEventListener('change', function() {
+                customOpeningGroup.style.display = this.value === 'custom' ? 'block' : 'none';
+            });
+
+            closingLineSelect.addEventListener('change', function() {
+                customClosingGroup.style.display = this.value === 'custom' ? 'block' : 'none';
+            });
+
+            // Generate letter
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                generateLetter();
+            });
+
+            function generateLetter() {
+                // Get form values
+                const yourName = document.getElementById('your-name').value;
+                const yourAddress = document.getElementById('your-address').value;
+                const yourEmail = document.getElementById('your-email').value;
+                const yourPhone = document.getElementById('your-phone').value;
+                const employerName = document.getElementById('employer-name').value;
+                const companyAddress = document.getElementById('company-address').value;
+                const jobTitle = document.getElementById('job-title').value;
+                const jobReference = document.getElementById('job-reference').value;
+                const letterBody = document.getElementById('letter-body').value;
+
+                // Get opening line
+                let openingLine = openingLineSelect.value;
+                if (openingLine === 'custom') {
+                    openingLine = document.getElementById('custom-opening').value;
+                }
+
+                // Get closing line
+                let closingLine = closingLineSelect.value;
+                if (closingLine === 'custom') {
+                    closingLine = document.getElementById('custom-closing').value;
+                }
+
+                // Today's date
+                const today = new Date();
+                const options = { year: 'numeric', month: 'long', day: 'numeric' };
+                const formattedDate = today.toLocaleDateString('en-US', options);
+
+                // Generate the letter
+                const letter = `
+                    ${yourAddress ? yourAddress + '<br>' : ''}
+                    ${yourEmail ? 'Email: ' + yourEmail + '<br>' : ''}
+                    ${yourPhone ? 'Phone: ' + yourPhone + '<br>' : ''}
+                    <br>
+                    ${formattedDate}
+                    <br><br>
+                    ${employerName}<br>
+                    ${companyAddress}
+                    <br><br>
+                    <strong>Subject: Application for ${jobTitle} ${jobReference ? '(' + jobReference + ')' : ''}</strong>
+                    <br><br>
+                    Dear ${employerName.split('/')[0].trim() || 'Hiring Manager'},
+                    <br><br>
+                    ${openingLine} the ${jobTitle} position at ${employerName.split('/')[1]?.trim() || 'your company'}.
+                    <br><br>
+                    ${letterBody}
+                    <br><br>
+                    ${closingLine}
+                    <br><br>
+                    Sincerely,
+                    <br><br>
+                    <div class="signature">${yourName}</div>
+                `;
+
+                // Display preview
+                letterPreview.innerHTML = letter;
+                previewSection.style.display = 'block';
+
+                // Scroll to preview
+                previewSection.scrollIntoView({ behavior: 'smooth' });
+
+                // Update PDF export version
+                updatePdfExport();
+            }
+
+            function updatePdfExport() {
+                // Clone the preview content
+                const previewClone = letterPreview.cloneNode(true);
+                
+                // Update the PDF export div
+                pdfExport.innerHTML = '';
+                pdfExport.appendChild(previewClone);
+            }
+
+            // Download as PDF
+            document.getElementById('download-pdf').addEventListener('click', function() {
+                loadingOverlay.style.display = 'flex';
+                
+                // Use the hidden PDF export div
+                html2canvas(pdfExport, {
+                    scale: 2,
+                    logging: false,
+                    useCORS: true,
+                    allowTaint: true
+                }).then(canvas => {
+                    const imgData = canvas.toDataURL('image/png');
+                    const pdf = new jsPDF('p', 'mm', 'a4');
+                    const imgWidth = 210;
+                    const pageHeight = 295;
+                    const imgHeight = canvas.height * imgWidth / canvas.width;
+                    let heightLeft = imgHeight;
+                    let position = 0;
+                    
+                    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                    heightLeft -= pageHeight;
+                    
+                    while (heightLeft >= 0) {
+                        position = heightLeft - imgHeight;
+                        pdf.addPage();
+                        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                        heightLeft -= pageHeight;
+                    }
+                    
+                    pdf.save(`Application_Letter_${document.getElementById('your-name').value || 'MyApplication'}.pdf`);
+                    loadingOverlay.style.display = 'none';
+                }).catch(err => {
+                    console.error('Error generating PDF:', err);
+                    loadingOverlay.style.display = 'none';
+                    alert('Error generating PDF. Please try again.');
+                });
+            });
+
+            // Copy to clipboard
+            document.getElementById('copy-text').addEventListener('click', function() {
+                const range = document.createRange();
+                range.selectNode(letterPreview);
+                window.getSelection().removeAllRanges();
+                window.getSelection().addRange(range);
+                document.execCommand('copy');
+                window.getSelection().removeAllRanges();
+                
+                alert('Letter copied to clipboard!');
+            });
+        });
+    </script>
+</body>
+</html>

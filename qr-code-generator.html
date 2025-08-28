@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Magic QR Generator</title>
+  <style>
+    :root {
+      --primary: #6a5acd;
+      --secondary: #9370db;
+      --accent: #ff69b4;
+      --dark: #483d8b;
+      --light: #f8f8ff;
+      --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Comic Neue', cursive;
+      background: linear-gradient(135deg, #e6f7ff 0%, #f0e6ff 100%);
+      color: #333;
+      line-height: 1.6;
+      padding: 20px;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 20px;
+      padding: 30px;
+      box-shadow: var(--shadow);
+      animation: fadeIn 0.8s ease-out;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    .header h1 {
+      font-family: 'Fredoka One', cursive;
+      color: var(--primary);
+      font-size: 2.5rem;
+      margin-bottom: 10px;
+    }
+
+    .header p {
+      color: var(--dark);
+      font-size: 1.2rem;
+    }
+
+    .generator-container {
+      display: flex;
+      flex-direction: column;
+      gap: 30px;
+    }
+
+    .tab-buttons {
+      display: flex;
+      border-radius: 50px;
+      overflow: hidden;
+      margin-bottom: 20px;
+      box-shadow: var(--shadow);
+    }
+
+    .tab-btn {
+      flex: 1;
+      padding: 15px;
+      border: none;
+      background: #ddd;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s;
+      font-size: 1rem;
+    }
+
+    .tab-btn.active {
+      background: var(--primary);
+      color: white;
+    }
+
+    .tab-btn:not(.active):hover {
+      background: #ccc;
+    }
+
+    .tab-content {
+      display: none;
+      animation: fadeIn 0.5s ease-out;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    .input-group {
+      margin-bottom: 20px;
+    }
+
+    .input-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: bold;
+    }
+
+    .input-group input[type="text"] {
+      width: 100%;
+      padding: 15px;
+      border: 2px solid #ddd;
+      border-radius: 10px;
+      font-size: 1rem;
+    }
+
+    .input-group input[type="text"]:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+
+    .customization {
+      background: #f9f9f9;
+      padding: 20px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+    }
+
+    .customization h3 {
+      margin-bottom: 15px;
+      color: var(--dark);
+    }
+
+    .color-picker {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 15px;
+      margin-bottom: 15px;
+    }
+
+    .color-picker label {
+      display: block;
+      margin-bottom: 5px;
+    }
+
+    .size-slider {
+      margin-top: 15px;
+    }
+
+    .size-slider label {
+      display: block;
+      margin-bottom: 10px;
+    }
+
+    .size-slider input {
+      width: 100%;
+    }
+
+    .qr-result {
+      text-align: center;
+      margin: 30px 0;
+      padding: 20px;
+      background: white;
+      border-radius: 10px;
+      box-shadow: var(--shadow);
+    }
+
+    #qrCode {
+      margin: 0 auto;
+      padding: 10px;
+      background: white;
+      border: 1px solid #ddd;
+      min-height: 200px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    #qrCode canvas {
+      max-width: 100%;
+      height: auto;
+    }
+
+    .action-buttons {
+      display: flex;
+      gap: 15px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-top: 20px;
+    }
+
+    .btn {
+      padding: 12px 25px;
+      border: none;
+      border-radius: 50px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: var(--dark);
+      transform: translateY(-2px);
+    }
+
+    .btn-accent {
+      background: var(--accent);
+      color: white;
+    }
+
+    .btn-accent:hover {
+      background: #ff1493;
+      transform: translateY(-2px);
+    }
+
+    .mystery-content {
+      text-align: center;
+      padding: 20px;
+    }
+
+    .mystery-content p {
+      margin-bottom: 20px;
+    }
+
+    .loading {
+      display: inline-block;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    @media (max-width: 768px) {
+      .container {
+        padding: 15px;
+      }
+      
+      .header h1 {
+        font-size: 2rem;
+      }
+      
+      .action-buttons {
+        flex-direction: column;
+      }
+      
+      .btn {
+        width: 100%;
+        justify-content: center;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <h1><i class="fas fa-qrcode"></i>QR Generator</h1>
+      <p>Create, customize, and discover with QR codes!</p>
+    </header>
+
+    <div class="generator-container">
+      <div class="input-section">
+        <div class="tab-buttons">
+          <button class="tab-btn active" id="createTab">Create</button>
+          <button class="tab-btn" id="mysteryTab">Mystery Mode</button>
+        </div>
+
+        <div class="tab-content active" id="createContent">
+          <div class="input-group">
+            <label for="qrText"><i class="fas fa-pencil-alt"></i> Enter text or URL</label>
+            <input type="text" id="qrText" placeholder="https://example.com or any text...">
+          </div>
+
+          <div class="customization">
+            <h3><i class="fas fa-palette"></i> Customize</h3>
+            
+            <div class="color-picker">
+              <div>
+                <label for="fgColor">Foreground:</label>
+                <input type="color" id="fgColor" value="#000000">
+              </div>
+              
+              <div>
+                <label for="bgColor">Background:</label>
+                <input type="color" id="bgColor" value="#ffffff">
+              </div>
+            </div>
+
+            <div class="size-slider">
+              <label for="qrSize">Size: <span id="sizeValue">200</span>px</label>
+              <input type="range" id="qrSize" min="100" max="400" value="200">
+            </div>
+          </div>
+
+          <button id="generateBtn" class="btn btn-primary">
+            <i class="fas fa-magic"></i> Generate QR Code
+          </button>
+        </div>
+
+        <div class="tab-content" id="mysteryContent">
+          <div class="mystery-content">
+            <h3><i class="fas fa-hat-wizard"></i> Feeling adventurous?</h3>
+            <p>Generate a random QR code that could lead to anything - a fun fact, a secret message, or a surprise website!</p>
+            <button id="mysteryBtn" class="btn btn-accent">
+              <i class="fas fa-dice"></i> Generate Mystery QR
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="qr-result">
+        <h3>Your QR Code</h3>
+        <div id="qrCode"></div>
+        <div class="action-buttons" id="actionButtons" style="display: none;">
+          <button id="downloadBtn" class="btn btn-primary">
+            <i class="fas fa-download"></i> Download
+          </button>
+          <button id="shareBtn" class="btn btn-accent">
+            <i class="fas fa-share-alt"></i> Share
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+  <script>
+    // DOM Elements
+    const createTab = document.getElementById('createTab');
+    const mysteryTab = document.getElementById('mysteryTab');
+    const createContent = document.getElementById('createContent');
+    const mysteryContent = document.getElementById('mysteryContent');
+    const qrText = document.getElementById('qrText');
+    const fgColor = document.getElementById('fgColor');
+    const bgColor = document.getElementById('bgColor');
+    const qrSize = document.getElementById('qrSize');
+    const sizeValue = document.getElementById('sizeValue');
+    const generateBtn = document.getElementById('generateBtn');
+    const mysteryBtn = document.getElementById('mysteryBtn');
+    const qrCodeDiv = document.getElementById('qrCode');
+    const actionButtons = document.getElementById('actionButtons');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const shareBtn = document.getElementById('shareBtn');
+
+    // Tab switching
+    createTab.addEventListener('click', () => {
+      createTab.classList.add('active');
+      mysteryTab.classList.remove('active');
+      createContent.classList.add('active');
+      mysteryContent.classList.remove('active');
+    });
+
+    mysteryTab.addEventListener('click', () => {
+      mysteryTab.classList.add('active');
+      createTab.classList.remove('active');
+      mysteryContent.classList.add('active');
+      createContent.classList.remove('active');
+    });
+
+    // Update size value display
+    qrSize.addEventListener('input', () => {
+      sizeValue.textContent = qrSize.value;
+    });
+
+    // Generate QR Code
+    generateBtn.addEventListener('click', generateQRCode);
+    mysteryBtn.addEventListener('click', generateMysteryQR);
+
+    // Download QR Code
+    downloadBtn.addEventListener('click', downloadQRCode);
+
+    // Share QR Code
+    shareBtn.addEventListener('click', shareQRCode);
+
+    // Function to generate QR code
+    function generateQRCode() {
+      const text = qrText.value.trim();
+      
+      if (!text) {
+        alert('Please enter some text or a URL first!');
+        return;
+      }
+
+      generateBtn.innerHTML = '<i class="fas fa-spinner loading"></i> Generating...';
+      
+      // Clear previous QR code
+      qrCodeDiv.innerHTML = '';
+      
+      QRCode.toCanvas(text, {
+        width: parseInt(qrSize.value),
+        color: {
+          dark: fgColor.value,
+          light: bgColor.value
+        }
+      }, function(error, canvas) {
+        generateBtn.innerHTML = '<i class="fas fa-magic"></i> Generate QR Code';
+        
+        if (error) {
+          console.error(error);
+          alert('Failed to generate QR code. Please try again.');
+          return;
+        }
+        
+        qrCodeDiv.appendChild(canvas);
+        actionButtons.style.display = 'flex';
+      });
+    }
+
+    // Function to generate mystery QR code
+    function generateMysteryQR() {
+      const mysteryOptions = [
+        "https://en.wikipedia.org/wiki/Special:Random",
+        "https://theuselessweb.com/",
+        "https://www.google.com/search?q=" + getRandomAnimal(),
+        "https://www.youtube.com/watch?v=" + getRandomYouTubeVideo(),
+        "You found a secret message: " + getRandomMessage(),
+        "Fun Fact: " + getRandomFact(),
+        "https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=" + getRandomCoordinates(),
+        "https://" + getRandomWebsite()
+      ];
+      
+      const randomOption = mysteryOptions[Math.floor(Math.random() * mysteryOptions.length)];
+      
+      mysteryBtn.innerHTML = '<i class="fas fa-spinner loading"></i> Creating Mystery...';
+      
+      // Clear previous QR code
+      qrCodeDiv.innerHTML = '';
+      
+      QRCode.toCanvas(randomOption, {
+        width: 200,
+        color: {
+          dark: getRandomColor(),
+          light: '#ffffff'
+        }
+      }, function(error, canvas) {
+        mysteryBtn.innerHTML = '<i class="fas fa-dice"></i> Generate Mystery QR';
+        
+        if (error) {
+          console.error(error);
+          alert('The mystery is too mysterious! Please try again.');
+          return;
+        }
+        
+        qrCodeDiv.appendChild(canvas);
+        actionButtons.style.display = 'flex';
+      });
+    }
+
+    // Helper functions for mystery mode
+    function getRandomAnimal() {
+      const animals = [
+        'panda', 'unicorn', 'dragon', 'axolotl', 'narwhal', 
+        'quokka', 'platypus', 'fennec fox', 'kiwi bird', 'mantis shrimp'
+      ];
+      return animals[Math.floor(Math.random() * animals.length)];
+    }
+
+    function getRandomYouTubeVideo() {
+      const videos = [
+        'dQw4w9WgXcQ', 'oHg5SJYRHA0', '9bZkp7q19f0', 
+        'DLzxrzFCyOs', 'jNQXAC9IVRw', 'd-diB65scQU'
+      ];
+      return videos[Math.floor(Math.random() * videos.length)];
+    }
+
+    function getRandomMessage() {
+      const messages = [
+        "You're awesome!",
+        "The treasure is buried under the big oak tree.",
+        "Be kind to others today.",
+        "The answer is 42.",
+        "You've been visited by the QR code fairy!",
+        "Share this with 5 friends for good luck!",
+        "The secret to happiness is... chocolate!"
+      ];
+      return messages[Math.floor(Math.random() * messages.length)];
+    }
+
+    function getRandomFact() {
+      const facts = [
+        "A group of flamingos is called a flamboyance.",
+        "Honey never spoils. Archaeologists have found pots of honey in ancient Egyptian tombs that are over 3,000 years old and still good to eat.",
+        "Octopuses have three hearts.",
+        "The shortest war in history was between Britain and Zanzibar in 1896. Zanzibar surrendered after 38 minutes.",
+        "Bananas are berries, but strawberries aren't.",
+        "A day on Venus is longer than a year on Venus.",
+        "The inventor of the frisbee was turned into a frisbee after he died."
+      ];
+      return facts[Math.floor(Math.random() * facts.length)];
+    }
+
+    function getRandomCoordinates() {
+      const lat = (Math.random() * 180 - 90).toFixed(6);
+      const lng = (Math.random() * 360 - 180).toFixed(6);
+      return `${lat},${lng}`;
+    }
+
+    function getRandomWebsite() {
+      const sites = [
+        "puppies.com",
+        "kittenwar.com",
+        "theoatmeal.com",
+        "zoomquilt.org",
+        "stars.chromeexperiments.com",
+        "weavesilk.com",
+        "bouncingdvdlogo.com"
+      ];
+      return sites[Math.floor(Math.random() * sites.length)];
+    }
+
+    function getRandomColor() {
+      const colors = [
+        '#FF6B6B', '#4ECDC4', '#45B7D1', '#FFBE0B', 
+        '#FB5607', '#8338EC', '#3A86FF', '#FF006E'
+      ];
+      return colors[Math.floor(Math.random() * colors.length)];
+    }
+
+    // Function to download QR code
+    function downloadQRCode() {
+      const canvas = qrCodeDiv.querySelector('canvas');
+      if (!canvas) {
+        alert('No QR code to download! Generate one first.');
+        return;
+      }
+      
+      const link = document.createElement('a');
+      link.download = 'qr-code.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    }
+
+    // Function to share QR code
+    async function shareQRCode() {
+      const canvas = qrCodeDiv.querySelector('canvas');
+      if (!canvas) {
+        alert('No QR code to share! Generate one first.');
+        return;
+      }
+      
+      try {
+        // Convert canvas to blob
+        canvas.toBlob(async (blob) => {
+          const file = new File([blob], 'qr-code.png', { type: 'image/png' });
+          
+          if (navigator.share && navigator.canShare({ files: [file] })) {
+            await navigator.share({
+              title: 'Check out this QR code!',
+              text: 'I created this QR code with Magic QR Generator',
+              files: [file]
+            });
+          } else {
+            // Fallback for browsers that don't support file sharing
+            const dataUrl = canvas.toDataURL('image/png');
+            const newWindow = window.open();
+            newWindow.document.write(`
+              <!DOCTYPE html>
+              <html>
+              <head>
+                <title>QR Code</title>
+                <style>
+                  body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
+                  img { max-width: 100%; height: auto; margin: 20px 0; }
+                  p { margin: 20px 0; }
+                </style>
+              </head>
+              <body>
+                <h1>Your QR Code</h1>
+                <img src="${dataUrl}" alt="QR Code">
+                <p>Right-click the image to save it or copy it to share.</p>
+              </body>
+              </html>
+            `);
+          }
+        }, 'image/png');
+      } catch (err) {
+        console.error('Error sharing:', err);
+        alert('Sharing failed. You can download the QR code instead.');
+      }
+    }
+  </script>
+</body>
+</html>

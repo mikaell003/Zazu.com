@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ID Photo Generator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.css">
+    <style>
+        :root {
+            --primary: #4a6bff;
+            --primary-dark: #3a5bef;
+            --danger: #ff4757;
+            --success: #2ecc71;
+            --light: #f8f9fa;
+            --dark: #2f3542;
+            --gray: #a4b0be;
+            --border: #dfe4ea;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #f1f2f6;
+            color: var(--dark);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        h1 {
+            color: var(--primary);
+            margin-bottom: 10px;
+        }
+
+        .description {
+            color: var(--gray);
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        .two-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+
+        @media (max-width: 768px) {
+            .two-column {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .upload-panel, .preview-panel {
+            background-color: white;
+            border-radius: 8px;
+            padding: 25px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        h2 {
+            color: var(--dark);
+            margin-bottom: 20px;
+            font-size: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--dark);
+        }
+
+        select, button {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: var(--primary-dark);
+        }
+
+        .btn-outline {
+            background-color: transparent;
+            border: 1px solid var(--primary);
+            color: var(--primary);
+        }
+
+        .btn-outline:hover {
+            background-color: rgba(74, 107, 255, 0.1);
+        }
+
+        .btn-danger {
+            background-color: var(--danger);
+        }
+
+        .btn-danger:hover {
+            background-color: #ff3f4f;
+        }
+
+        /* Image Upload & Cropper */
+        .upload-area {
+            border: 2px dashed var(--border);
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 20px;
+            cursor: pointer;
+            transition: border-color 0.3s;
+        }
+
+        .upload-area:hover {
+            border-color: var(--primary);
+        }
+
+        .upload-area i {
+            font-size: 48px;
+            color: var(--gray);
+            margin-bottom: 10px;
+        }
+
+        .upload-area p {
+            color: var(--gray);
+        }
+
+        #file-input {
+            display: none;
+        }
+
+        #image-preview {
+            max-width: 100%;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        /* Cropper Container */
+        .cropper-container {
+            width: 100%;
+            height: 400px;
+            margin-bottom: 20px;
+            overflow: hidden;
+            position: relative;
+            background-color: #f8f9fa;
+            border: 1px solid var(--border);
+        }
+
+        /* Preview Panel */
+        .id-photo-preview {
+            width: 100%;
+            height: 400px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #f8f9fa;
+            border: 1px solid var(--border);
+            margin-bottom: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .id-photo-preview img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        /* Background Options */
+        .background-options {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .bg-option {
+            width: 30px;
+            height: 30px;
+            border-radius: 4px;
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+
+        .bg-option:hover {
+            border-color: var(--primary);
+        }
+
+        .bg-option.active {
+            border-color: var(--primary);
+            transform: scale(1.1);
+        }
+
+        /* Photo Sizes */
+        .photo-size-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .size-option {
+            padding: 10px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .size-option:hover {
+            border-color: var(--primary);
+            background-color: rgba(74, 107, 255, 0.1);
+        }
+
+        .size-option.active {
+            background-color: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .size-option small {
+            display: block;
+            font-size: 12px;
+            color: inherit;
+            opacity: 0.8;
+        }
+
+        /* Responsive Adjustments */
+        @media (max-width: 480px) {
+            .background-options, .photo-size-options {
+                flex-wrap: wrap;
+            }
+        }
+
+        /* Loading Spinner */
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-radius: 50%;
+            border-top: 4px solid var(--primary);
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+            display: none;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>ID Photo Generator</h1>
+            <p class="description">Create perfectly sized photos for passports, IDs, and visa applications</p>
+        </header>
+
+        <div class="two-column">
+            <div class="upload-panel">
+                <h2>Upload & Edit Photo</h2>
+                
+                <div class="upload-area" id="upload-area">
+                    <i>📷</i>
+                    <p>Click to upload a photo</p>
+                    <p>or drag and drop an image</p>
+                    <input type="file" id="file-input" accept="image/*">
+                </div>
+                
+                <div class="cropper-container" id="cropper-container" style="display: none;">
+                    <img id="image-preview" src="" alt="Preview">
+                </div>
+                
+                <div class="form-group">
+                    <label>Select ID Photo Size</label>
+                    <div class="photo-size-options">
+                        <div class="size-option active" data-size="passport" data-width="35" data-height="45">
+                            Passport (35×45mm)
+                            <small>Most countries</small>
+                        </div>
+                        <div class="size-option" data-size="us-visa" data-width="51" data-height="51">
+                            US Visa (51×51mm)
+                            <small>2×2 inches</small>
+                        </div>
+                        <div class="size-option" data-size="eu-id" data-width="35" data-height="45">
+                            EU ID (35×45mm)
+                            <small>European Union</small>
+                        </div>
+                        <div class="size-option" data-size="india" data-width="35" data-height="35">
+                            India (35×35mm)
+                            <small>Indian documents</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Background Color</label>
+                    <div class="background-options">
+                        <div class="bg-option active" style="background-color: #ffffff;" data-bg="#ffffff"></div>
+                        <div class="bg-option" style="background-color: #f0f0f0;" data-bg="#f0f0f0"></div>
+                        <div class="bg-option" style="background-color: #4a6bff;" data-bg="#4a6bff"></div>
+                        <div class="bg-option" style="background-color: #2ecc71;" data-bg="#2ecc71"></div>
+                        <div class="bg-option" style="background-color: #e6e6e6;" data-bg="#e6e6e6"></div>
+                    </div>
+                </div>
+                
+                <button id="generate-btn" class="btn" disabled>Generate ID Photo</button>
+                <button id="reset-btn" class="btn btn-outline" disabled>Reset</button>
+            </div>
+            
+            <div class="preview-panel">
+                <h2>Your ID Photo</h2>
+                
+                <div class="id-photo-preview" id="id-photo-preview">
+                    <p>Your generated ID photo will appear here</p>
+                </div>
+                
+                <div class="form-group">
+                    <label>Download Options</label>
+                    <select id="download-format">
+                        <option value="png">PNG (High Quality)</option>
+                        <option value="jpeg">JPEG (Smaller File)</option>
+                        <option value="pdf">PDF (Printable)</option>
+                    </select>
+                </div>
+                
+                <button id="download-btn" class="btn btn-success" disabled>Download ID Photo</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // DOM Elements
+            const uploadArea = document.getElementById('upload-area');
+            const fileInput = document.getElementById('file-input');
+            const cropperContainer = document.getElementById('cropper-container');
+            const imagePreview = document.getElementById('image-preview');
+            const idPhotoPreview = document.getElementById('id-photo-preview');
+            const generateBtn = document.getElementById('generate-btn');
+            const resetBtn = document.getElementById('reset-btn');
+            const downloadBtn = document.getElementById('download-btn');
+            const sizeOptions = document.querySelectorAll('.size-option');
+            const bgOptions = document.querySelectorAll('.bg-option');
+            const downloadFormat = document.getElementById('download-format');
+            
+            // Variables
+            let cropper;
+            let currentImage = null;
+            let selectedSize = { width: 35, height: 45 }; // Default passport size
+            let selectedBg = '#ffffff';
+            let generatedPhotoUrl = null;
+            
+            // Event Listeners
+            uploadArea.addEventListener('click', () => fileInput.click());
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.style.borderColor = 'var(--primary)';
+            });
+            uploadArea.addEventListener('dragleave', () => {
+                uploadArea.style.borderColor = 'var(--border)';
+            });
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.style.borderColor = 'var(--border)';
+                if (e.dataTransfer.files.length) {
+                    fileInput.files = e.dataTransfer.files;
+                    handleFileSelect(e.dataTransfer.files[0]);
+                }
+            });
+            
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files.length) {
+                    handleFileSelect(e.target.files[0]);
+                }
+            });
+            
+            // Size selection
+            sizeOptions.forEach(option => {
+                option.addEventListener('click', function() {
+                    sizeOptions.forEach(opt => opt.classList.remove('active'));
+                    this.classList.add('active');
+                    selectedSize = {
+                        width: parseInt(this.dataset.width),
+                        height: parseInt(this.dataset.height)
+                    };
+                });
+            });
+            
+            // Background selection
+            bgOptions.forEach(option => {
+                option.addEventListener('click', function() {
+                    bgOptions.forEach(opt => opt.classList.remove('active'));
+                    this.classList.add('active');
+                    selectedBg = this.dataset.bg;
+                    if (generatedPhotoUrl) {
+                        updatePreviewWithBackground(generatedPhotoUrl);
+                    }
+                });
+            });
+            
+            // Generate ID Photo
+            generateBtn.addEventListener('click', generateIdPhoto);
+            
+            // Reset
+            resetBtn.addEventListener('click', resetTool);
+            
+            // Download
+            downloadBtn.addEventListener('click', downloadIdPhoto);
+            
+            // Functions
+            function handleFileSelect(file) {
+                if (!file.type.match('image.*')) {
+                    alert('Please select an image file (JPEG, PNG, etc.)');
+                    return;
+                }
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    imagePreview.src = e.target.result;
+                    imagePreview.style.display = 'block';
+                    cropperContainer.style.display = 'block';
+                    uploadArea.style.display = 'none';
+                    
+                    // Initialize Cropper.js
+                    if (cropper) {
+                        cropper.destroy();
+                    }
+                    
+                    cropper = new Cropper(imagePreview, {
+                        aspectRatio: selectedSize.width / selectedSize.height,
+                        viewMode: 1,
+                        autoCropArea: 0.8,
+                        responsive: true,
+                        guides: false
+                    });
+                    
+                    generateBtn.disabled = false;
+                    resetBtn.disabled = false;
+                };
+                reader.readAsDataURL(file);
+            }
+            
+            function generateIdPhoto() {
+                if (!cropper) return;
+                
+                // Show loading
+                generateBtn.innerHTML = '<span class="spinner" style="width: 20px; height: 20px; border-width: 2px;"></span> Processing...';
+                generateBtn.disabled = true;
+                
+                // Get cropped canvas
+                const canvas = cropper.getCroppedCanvas({
+                    width: selectedSize.width * 10, // Convert mm to pixels (approx)
+                    height: selectedSize.height * 10,
+                    minWidth: 256,
+                    minHeight: 256,
+                    maxWidth: 2000,
+                    maxHeight: 2000,
+                    fillColor: selectedBg
+                });
+                
+                // Convert to image and display in preview
+                canvas.toBlob((blob) => {
+                    generatedPhotoUrl = URL.createObjectURL(blob);
+                    updatePreviewWithBackground(generatedPhotoUrl);
+                    downloadBtn.disabled = false;
+                    
+                    // Reset button state
+                    generateBtn.innerHTML = 'Generate ID Photo';
+                    generateBtn.disabled = false;
+                }, 'image/png', 0.9);
+            }
+            
+            function updatePreviewWithBackground(imageUrl) {
+                idPhotoPreview.innerHTML = '';
+                const img = document.createElement('img');
+                img.src = imageUrl;
+                img.style.backgroundColor = selectedBg;
+                idPhotoPreview.appendChild(img);
+            }
+            
+            function resetTool() {
+                if (cropper) {
+                    cropper.destroy();
+                    cropper = null;
+                }
+                
+                imagePreview.src = '';
+                imagePreview.style.display = 'none';
+                cropperContainer.style.display = 'none';
+                uploadArea.style.display = 'block';
+                idPhotoPreview.innerHTML = '<p>Your generated ID photo will appear here</p>';
+                fileInput.value = '';
+                generateBtn.disabled = true;
+                downloadBtn.disabled = true;
+                generatedPhotoUrl = null;
+            }
+            
+            function downloadIdPhoto() {
+                if (!generatedPhotoUrl) return;
+                
+                const format = downloadFormat.value;
+                const link = document.createElement('a');
+                let filename = 'id_photo';
+                
+                if (format === 'pdf') {
+                    // In a real app, you would convert to PDF using a library like jsPDF
+                    alert('PDF conversion would happen here in a full implementation');
+                    return;
+                } else {
+                    filename += `.${format}`;
+                    link.href = generatedPhotoUrl;
+                    link.download = filename;
+                    link.click();
+                }
+            }
+        });
+    </script>
+</body>
+</html>

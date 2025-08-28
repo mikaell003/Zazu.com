@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Image to PDF Converter | Zazu Smart Tools Hub</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <!-- Font Awesome for icons -->
+  <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Fredoka+One&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #6C63FF;
+      --secondary: #FF6584;
+      --accent: #4BC0C8;
+      --dark: #2D3748;
+      --light: #F7FAFC;
+    }
+    
+    body {
+      font-family: 'Poppins', sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f9f9ff;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      color: white;
+      padding: 30px 20px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    header::before {
+      content: "";
+      position: absolute;
+      top: -50px;
+      left: -50px;
+      width: 150px;
+      height: 150px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 50%;
+    }
+
+    header::after {
+      content: "";
+      position: absolute;
+      bottom: -80px;
+      right: -30px;
+      width: 200px;
+      height: 200px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 50%;
+    }
+
+    h1 {
+      font-family: 'Fredoka One', cursive;
+      font-size: 2.2rem;
+      margin: 0;
+      position: relative;
+      z-index: 2;
+      text-shadow: 2px 2px 0 rgba(0,0,0,0.1);
+    }
+
+    header p {
+      font-size: 1.1rem;
+      opacity: 0.9;
+      position: relative;
+      z-index: 2;
+      max-width: 600px;
+      margin: 10px auto 0;
+    }
+
+    .tool-card {
+      background-color: white;
+      padding: 30px;
+      border-radius: 15px;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+      max-width: 600px;
+      margin: 30px auto;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+      border: 1px solid rgba(0,0,0,0.05);
+    }
+
+    .tool-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 5px;
+      background: linear-gradient(90deg, var(--primary), var(--accent));
+    }
+
+    .file-input-container {
+      position: relative;
+      margin: 25px 0;
+    }
+
+    .file-input-label {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px;
+      border: 2px dashed #ddd;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .file-input-label:hover {
+      border-color: var(--primary);
+      background-color: rgba(108, 99, 255, 0.05);
+    }
+
+    .file-input-label i {
+      font-size: 48px;
+      margin-bottom: 15px;
+      color: var(--primary);
+    }
+
+    .file-input-label span {
+      font-size: 1.1rem;
+      color: var(--dark);
+    }
+
+    .file-input-label small {
+      color: #777;
+      margin-top: 10px;
+      font-size: 0.9rem;
+    }
+
+    #imageFiles {
+      position: absolute;
+      width: 0.1px;
+      height: 0.1px;
+      opacity: 0;
+      overflow: hidden;
+      z-index: -1;
+    }
+
+    .selected-files {
+      margin: 20px 0;
+      text-align: left;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .selected-file {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px;
+      background-color: #f8f9fa;
+      border-radius: 5px;
+      margin-bottom: 8px;
+    }
+
+    .selected-file i {
+      color: var(--secondary);
+      cursor: pointer;
+    }
+
+    button {
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      color: white;
+      border: none;
+      padding: 12px 30px;
+      border-radius: 50px;
+      cursor: pointer;
+      transition: all 0.3s;
+      font-weight: 600;
+      font-size: 1rem;
+      box-shadow: 0 4px 10px rgba(108, 99, 255, 0.3);
+      position: relative;
+      overflow: hidden;
+      margin-top: 15px;
+    }
+
+    button:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 7px 15px rgba(108, 99, 255, 0.4);
+    }
+
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    button::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+      transition: 0.5s;
+    }
+
+    button:hover::before {
+      left: 100%;
+    }
+
+    #status {
+      margin-top: 20px;
+      padding: 10px;
+      border-radius: 5px;
+      font-weight: 600;
+    }
+
+    .success {
+      color: #1e7e34;
+      background-color: #e6f7eb;
+    }
+
+    .error {
+      color: #dc3545;
+      background-color: #fce8e8;
+    }
+
+    .info {
+      color: #0066cc;
+      background-color: #e6f2ff;
+    }
+
+    footer {
+      background-color: var(--dark);
+      color: white;
+      text-align: center;
+      padding: 20px;
+      margin-top: auto;
+      position: relative;
+    }
+
+    footer::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 5px;
+      background: linear-gradient(90deg, var(--primary), var(--accent), var(--secondary));
+    }
+
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      color: white;
+      text-decoration: none;
+      margin-top: 15px;
+      transition: all 0.3s;
+    }
+
+    .back-link:hover {
+      color: var(--secondary);
+      text-decoration: none;
+    }
+
+    .back-link i {
+      margin-right: 8px;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+      h1 {
+        font-size: 1.8rem;
+      }
+      
+      header p {
+        font-size: 1rem;
+      }
+      
+      .tool-card {
+        padding: 20px;
+        margin: 20px 15px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      h1 {
+        font-size: 1.5rem;
+      }
+      
+      .file-input-label {
+        padding: 30px 15px;
+      }
+      
+      .file-input-label i {
+        font-size: 36px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <header>
+    <h1>Image to PDF Converter</h1>
+    <p>Convert multiple images into a single PDF file with ease</p>
+  </header>
+
+  <div class="tool-card">
+    <div class="file-input-container">
+      <label for="imageFiles" class="file-input-label">
+        <i class="fas fa-cloud-upload-alt"></i>
+        <span>Choose images or drag them here</span>
+        <small>Supports JPG, PNG, GIF, and other image formats</small>
+      </label>
+      <input type="file" id="imageFiles" accept="image/*" multiple>
+    </div>
+
+    <div class="selected-files" id="selectedFiles"></div>
+
+    <button id="convertBtn" onclick="convertImagesToPDF()">
+      <i class="fas fa-file-pdf"></i> Convert to PDF
+    </button>
+    <p id="status"></p>
+  </div>
+
+  <footer>
+    <a href="index.html" class="back-link">
+      <i class="fas fa-arrow-left"></i> Back to Home
+    </a>
+    <p>© 2025 Zazu Smart Tools Hub. All Rights Reserved.</p>
+  </footer>
+
+  <script>
+    // Initialize jsPDF
+    const { jsPDF } = window.jspdf;
+    
+    // DOM elements
+    const imageFilesInput = document.getElementById('imageFiles');
+    const selectedFilesDiv = document.getElementById('selectedFiles');
+    const convertBtn = document.getElementById('convertBtn');
+    const statusEl = document.getElementById('status');
+    
+    // Track selected files
+    let selectedFiles = [];
+    
+    // Handle file selection
+    imageFilesInput.addEventListener('change', function(e) {
+      selectedFiles = Array.from(e.target.files);
+      updateSelectedFilesList();
+    });
+    
+    // Update the list of selected files
+    function updateSelectedFilesList() {
+      selectedFilesDiv.innerHTML = '';
+      
+      if (selectedFiles.length === 0) {
+        statusEl.textContent = 'No files selected';
+        statusEl.className = 'info';
+        convertBtn.disabled = true;
+        return;
+      }
+      
+      selectedFiles.forEach((file, index) => {
+        const fileDiv = document.createElement('div');
+        fileDiv.className = 'selected-file';
+        
+        const fileInfo = document.createElement('span');
+        fileInfo.textContent = `${file.name} (${formatFileSize(file.size)})`;
+        
+        const removeBtn = document.createElement('i');
+        removeBtn.className = 'fas fa-times';
+        removeBtn.title = 'Remove file';
+        removeBtn.addEventListener('click', () => removeFile(index));
+        
+        fileDiv.appendChild(fileInfo);
+        fileDiv.appendChild(removeBtn);
+        selectedFilesDiv.appendChild(fileDiv);
+      });
+      
+      statusEl.textContent = `${selectedFiles.length} file(s) selected`;
+      statusEl.className = 'info';
+      convertBtn.disabled = false;
+    }
+    
+    // Remove a file from the selection
+    function removeFile(index) {
+      selectedFiles.splice(index, 1);
+      
+      // Create a new DataTransfer object to update the file input
+      const dataTransfer = new DataTransfer();
+      selectedFiles.forEach(file => dataTransfer.items.add(file));
+      imageFilesInput.files = dataTransfer.files;
+      
+      updateSelectedFilesList();
+    }
+    
+    // Format file size
+    function formatFileSize(bytes) {
+      if (bytes === 0) return '0 Bytes';
+      const k = 1024;
+      const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+    
+    // Drag and drop functionality
+    const fileInputLabel = document.querySelector('.file-input-label');
+    
+    fileInputLabel.addEventListener('dragover', (e) => {
+      e.preventDefault();
+     fileInputLabel.style.borderColor = getComputedStyle(document.documentElement).getPropertyValue('--primary');
+      fileInputLabel.style.backgroundColor = 'rgba(108, 99, 255, 0.1)';
+    });
+    
+    fileInputLabel.addEventListener('dragleave', () => {
+      fileInputLabel.style.borderColor = '#ddd';
+      fileInputLabel.style.backgroundColor = '';
+    });
+    
+    fileInputLabel.addEventListener('drop', (e) => {
+      e.preventDefault();
+      fileInputLabel.style.borderColor = '#ddd';
+      fileInputLabel.style.backgroundColor = '';
+      
+      const files = e.dataTransfer.files;
+      const imageFiles = Array.from(files).filter(file => file.type.startsWith('image/'));
+      
+      if (imageFiles.length === 0) {
+        statusEl.textContent = 'Please select only image files';
+        statusEl.className = 'error';
+        return;
+      }
+      
+      // Combine with existing files if any
+      selectedFiles = selectedFiles.concat(imageFiles);
+      
+      // Update the file input
+      const dataTransfer = new DataTransfer();
+      selectedFiles.forEach(file => dataTransfer.items.add(file));
+      imageFilesInput.files = dataTransfer.files;
+      
+      updateSelectedFilesList();
+    });
+    
+    // Convert images to PDF
+    async function convertImagesToPDF() {
+      if (selectedFiles.length === 0) {
+        statusEl.textContent = "Please select at least one image file.";
+        statusEl.className = 'error';
+        return;
+      }
+      
+      const pdf = new jsPDF();
+      convertBtn.disabled = true;
+      convertBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+      statusEl.textContent = "Processing images...";
+      statusEl.className = 'info';
+      
+      try {
+        for (let i = 0; i < selectedFiles.length; i++) {
+          const file = selectedFiles[i];
+          
+          // Update status
+          statusEl.textContent = `Processing image ${i + 1} of ${selectedFiles.length}...`;
+          
+          const imageData = await toBase64(file);
+          
+          // For the first image, keep the default page
+          if (i > 0) {
+            pdf.addPage();
+          }
+          
+          // Add image to PDF (auto-resize to fit page)
+          const imgProps = pdf.getImageProperties(imageData);
+          const pdfWidth = pdf.internal.pageSize.getWidth() - 20; // 10mm margins on each side
+          const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+          
+          pdf.addImage(imageData, 'JPEG', 10, 10, pdfWidth, pdfHeight);
+        }
+        
+        // Save the PDF
+        pdf.save('images_converted.pdf');
+        
+        statusEl.textContent = `PDF generated successfully with ${selectedFiles.length} image(s)!`;
+        statusEl.className = 'success';
+      } catch (error) {
+        console.error('Error generating PDF:', error);
+        statusEl.textContent = "Error generating PDF. Please try again.";
+        statusEl.className = 'error';
+      } finally {
+        convertBtn.disabled = false;
+        convertBtn.innerHTML = '<i class="fas fa-file-pdf"></i> Convert to PDF';
+      }
+    }
+    
+    // Convert file to base64
+    function toBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = error => reject(error);
+      });
+    }
+  </script>
+</body>
+
+</html>

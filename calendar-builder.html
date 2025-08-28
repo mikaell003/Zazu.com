@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Magic Calendar Builder with Export</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #6e8efb, #a777e3);
+            color: #333;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: white;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        
+        .calendar-container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            overflow: hidden;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 0 10px;
+        }
+        
+        .month-nav {
+            background: #6e8efb;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .month-nav:hover {
+            background: #5a7de3;
+            transform: translateY(-2px);
+        }
+        
+        .current-month {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #444;
+        }
+        
+        .weekdays {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            text-align: center;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #6e8efb;
+        }
+        
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 8px;
+        }
+        
+        .calendar-day {
+            min-height: 120px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            background: white;
+        }
+        
+        .calendar-day:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            border-color: #a777e3;
+        }
+        
+        .day-number {
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #555;
+        }
+        
+        .day-content {
+            font-size: 0.8rem;
+            color: #666;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .empty-day {
+            background: #f5f5f5;
+            border: 2px dashed #e0e0e0;
+            border-radius: 10px;
+            min-height: 120px;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 100;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal-content {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .close-modal {
+            background: #ff4757;
+            color: white;
+            border: none;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        
+        textarea {
+            width: 100%;
+            height: 150px;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            resize: vertical;
+            margin-bottom: 15px;
+            font-family: inherit;
+        }
+        
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+        
+        .modal-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        
+        .save-btn {
+            background: #6e8efb;
+            color: white;
+        }
+        
+        .save-btn:hover {
+            background: #5a7de3;
+        }
+        
+        .draw-btn {
+            background: #a777e3;
+            color: white;
+        }
+        
+        .draw-btn:hover {
+            background: #9165d6;
+        }
+        
+        .drawing-canvas {
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            background: white;
+            touch-action: none;
+        }
+        
+        .tools {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .tool-btn {
+            padding: 8px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .tool-btn.active {
+            background: #6e8efb;
+            color: white;
+            border-color: #6e8efb;
+        }
+        
+        .color-picker {
+            height: 30px;
+            width: 30px;
+            padding: 0;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        
+        .mini-game {
+            text-align: center;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            margin-top: 10px;
+            display: none;
+        }
+        
+        .game-btn {
+            background: #ff9f43;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 10px;
+            transition: all 0.3s;
+        }
+        
+        .game-btn:hover {
+            background: #ff7f00;
+        }
+        
+        .export-options {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .export-btn {
+            background: #2ed573;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .export-btn:hover {
+            background: #25b560;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        .export-btn img {
+            width: 20px;
+            height: 20px;
+        }
+        
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            background: #2ed573;
+            color: white;
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            transform: translateX(150%);
+            transition: transform 0.3s ease-out;
+            z-index: 1000;
+        }
+        
+        .notification.show {
+            transform: translateX(0);
+        }
+        
+        @media (max-width: 768px) {
+            .calendar-day {
+                min-height: 80px;
+                padding: 5px;
+            }
+            
+            .day-content {
+                font-size: 0.7rem;
+            }
+            
+            .export-options {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .export-btn {
+                width: 200px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Magic Calendar Builder</h1>
+            <p>Create interactive days with notes, drawings, and surprises!</p>
+        </header>
+        
+        <div class="calendar-container" id="calendar-to-export">
+            <div class="calendar-header">
+                <button class="month-nav" id="prev-month">&lt; Previous</button>
+                <h2 class="current-month" id="current-month">January 2023</h2>
+                <button class="month-nav" id="next-month">Next &gt;</button>
+            </div>
+            
+            <div class="weekdays">
+                <div>Sun</div>
+                <div>Mon</div>
+                <div>Tue</div>
+                <div>Wed</div>
+                <div>Thu</div>
+                <div>Fri</div>
+                <div>Sat</div>
+            </div>
+            
+            <div class="calendar-grid" id="calendar-grid">
+                <!-- Calendar days will be generated here -->
+            </div>
+        </div>
+        
+        <div class="export-options">
+            <button class="export-btn" id="export-png">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                    <path d="M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h5.5L14 4.5zm-3 0A1.5 1.5 0 0 1 9.5 3V1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V4.5h-2z"/>
+                    <path d="M10.5 8.5a.5.5 0 0 1-1 0V6H7a.5.5 0 0 1 0-1h2.5V2.5a.5.5 0 0 1 1 0V5H13a.5.5 0 0 1 0 1h-2.5z"/>
+                </svg>
+                Save as PNG
+            </button>
+            <button class="export-btn" id="export-jpg">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                    <path d="M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h5.5L14 4.5zm-3 0A1.5 1.5 0 0 1 9.5 3V1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V4.5h-2z"/>
+                    <path d="M10.5 8.5a.5.5 0 0 1-1 0V6H7a.5.5 0 0 1 0-1h2.5V2.5a.5.5 0 0 1 1 0V5H13a.5.5 0 0 1 0 1h-2.5z"/>
+                </svg>
+                Save as JPG
+            </button>
+            <button class="export-btn" id="export-pdf">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                    <path d="M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h5.5L14 4.5zm-3 0A1.5 1.5 0 0 1 9.5 3V1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V4.5h-2z"/>
+                    <path d="M10.5 8.5a.5.5 0 0 1-1 0V6H7a.5.5 0 0 1 0-1h2.5V2.5a.5.5 0 0 1 1 0V5H13a.5.5 0 0 1 0 1h-2.5z"/>
+                </svg>
+                Save as PDF
+            </button>
+        </div>
+    </div>
+    
+    <!-- Day Editor Modal -->
+    <div class="modal" id="day-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modal-day-title">Edit Day</h3>
+                <button class="close-modal" id="close-modal">&times;</button>
+            </div>
+            
+            <div id="note-section">
+                <textarea id="day-notes" placeholder="Add your notes here..."></textarea>
+            </div>
+            
+            <div id="draw-section" style="display: none;">
+                <canvas id="drawing-canvas" class="drawing-canvas" width="400" height="200"></canvas>
+                <div class="tools">
+                    <button class="tool-btn active" data-tool="pen">Pen</button>
+                    <button class="tool-btn" data-tool="eraser">Eraser</button>
+                    <input type="color" class="color-picker" id="color-picker" value="#000000">
+                </div>
+            </div>
+            
+            <div class="mini-game" id="mini-game">
+                <h4>Daily Mini-Game</h4>
+                <p>Click the button 10 times as fast as you can!</p>
+                <button class="game-btn" id="game-button">Click Me!</button>
+                <p id="game-score">Score: 0</p>
+            </div>
+            
+            <div class="modal-actions">
+                <button class="modal-btn draw-btn" id="toggle-draw">Draw</button>
+                <button class="modal-btn draw-btn" id="toggle-game">Game</button>
+                <button class="modal-btn save-btn" id="save-day">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="notification" id="notification">
+        Your calendar is being exported. Please wait...
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Current date tracking
+            let currentDate = new Date();
+            let currentYear = currentDate.getFullYear();
+            let currentMonth = currentDate.getMonth();
+            
+            // Day editor state
+            let selectedDay = null;
+            let isDrawing = false;
+            let currentTool = 'pen';
+            let drawColor = '#000000';
+            let canvasContext;
+            
+            // Mini-game state
+            let gameClicks = 0;
+            let gameStartTime = 0;
+            
+            // DOM Elements
+            const calendarGrid = document.getElementById('calendar-grid');
+            const currentMonthElement = document.getElementById('current-month');
+            const prevMonthButton = document.getElementById('prev-month');
+            const nextMonthButton = document.getElementById('next-month');
+            const dayModal = document.getElementById('day-modal');
+            const closeModalButton = document.getElementById('close-modal');
+            const modalDayTitle = document.getElementById('modal-day-title');
+            const dayNotes = document.getElementById('day-notes');
+            const saveDayButton = document.getElementById('save-day');
+            const toggleDrawButton = document.getElementById('toggle-draw');
+            const drawSection = document.getElementById('draw-section');
+            const noteSection = document.getElementById('note-section');
+            const drawingCanvas = document.getElementById('drawing-canvas');
+            const toolButtons = document.querySelectorAll('.tool-btn');
+            const colorPicker = document.getElementById('color-picker');
+            const toggleGameButton = document.getElementById('toggle-game');
+            const miniGame = document.getElementById('mini-game');
+            const gameButton = document.getElementById('game-button');
+            const gameScore = document.getElementById('game-score');
+            const exportPngButton = document.getElementById('export-png');
+            const exportJpgButton = document.getElementById('export-jpg');
+            const exportPdfButton = document.getElementById('export-pdf');
+            const notification = document.getElementById('notification');
+            const calendarToExport = document.getElementById('calendar-to-export');
+            
+            // Initialize canvas
+            canvasContext = drawingCanvas.getContext('2d');
+            canvasContext.lineWidth = 2;
+            canvasContext.lineCap = 'round';
+            
+            // Event listeners
+            prevMonthButton.addEventListener('click', () => {
+                currentMonth--;
+                if (currentMonth < 0) {
+                    currentMonth = 11;
+                    currentYear--;
+                }
+                renderCalendar();
+            });
+            
+            nextMonthButton.addEventListener('click', () => {
+                currentMonth++;
+                if (currentMonth > 11) {
+                    currentMonth = 0;
+                    currentYear++;
+                }
+                renderCalendar();
+            });
+            
+            closeModalButton.addEventListener('click', closeModal);
+            saveDayButton.addEventListener('click', saveDayData);
+            toggleDrawButton.addEventListener('click', toggleDrawing);
+            toggleGameButton.addEventListener('click', toggleGame);
+            gameButton.addEventListener('click', handleGameClick);
+            
+            // Export buttons
+            exportPngButton.addEventListener('click', () => exportCalendar('png'));
+            exportJpgButton.addEventListener('click', () => exportCalendar('jpg'));
+            exportPdfButton.addEventListener('click', () => exportCalendar('pdf'));
+            
+            // Tool selection
+            toolButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    toolButtons.forEach(btn => btn.classList.remove('active'));
+                    button.classList.add('active');
+                    currentTool = button.dataset.tool;
+                });
+            });
+            
+            colorPicker.addEventListener('change', (e) => {
+                drawColor = e.target.value;
+            });
+            
+            // Canvas drawing events
+            drawingCanvas.addEventListener('mousedown', startDrawing);
+            drawingCanvas.addEventListener('mousemove', draw);
+            drawingCanvas.addEventListener('mouseup', stopDrawing);
+            drawingCanvas.addEventListener('mouseout', stopDrawing);
+            
+            // Touch events for mobile
+            drawingCanvas.addEventListener('touchstart', handleTouchStart);
+            drawingCanvas.addEventListener('touchmove', handleTouchMove);
+            drawingCanvas.addEventListener('touchend', handleTouchEnd);
+            
+            // Initialize calendar
+            renderCalendar();
+            
+            // Functions
+            function renderCalendar() {
+                // Update current month display
+                const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
+                                   'July', 'August', 'September', 'October', 'November', 'December'];
+                currentMonthElement.textContent = `${monthNames[currentMonth]} ${currentYear}`;
+                
+                // Clear the calendar grid
+                calendarGrid.innerHTML = '';
+                
+                // Get first day of month and number of days
+                const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+                const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+                
+                // Create empty placeholder days
+                for (let i = 0; i < firstDay; i++) {
+                    const emptyDay = document.createElement('div');
+                    emptyDay.classList.add('empty-day');
+                    calendarGrid.appendChild(emptyDay);
+                }
+                
+                // Create days of the month
+                for (let day = 1; day <= daysInMonth; day++) {
+                    const dayElement = document.createElement('div');
+                    dayElement.classList.add('calendar-day');
+                    dayElement.dataset.day = day;
+                    dayElement.dataset.month = currentMonth;
+                    dayElement.dataset.year = currentYear;
+                    
+                    const dayNumber = document.createElement('div');
+                    dayNumber.classList.add('day-number');
+                    dayNumber.textContent = day;
+                    
+                    const dayContent = document.createElement('div');
+                    dayContent.classList.add('day-content');
+                    
+                    // Check if we have data for this day
+                    const dayData = getDayData(currentYear, currentMonth, day);
+                    if (dayData) {
+                        if (dayData.notes) {
+                            dayContent.textContent = dayData.notes;
+                        }
+                        
+                        // Add visual indicator if day has content
+                        if (dayData.notes || dayData.drawing) {
+                            dayElement.style.borderColor = '#a777e3';
+                            dayElement.style.backgroundColor = '#f0f4ff';
+                        }
+                    }
+                    
+                    dayElement.appendChild(dayNumber);
+                    dayElement.appendChild(dayContent);
+                    
+                    // Add click event to edit day
+                    dayElement.addEventListener('click', () => openDayEditor(dayElement));
+                    
+                    calendarGrid.appendChild(dayElement);
+                }
+            }
+            
+            function openDayEditor(dayElement) {
+                const day = dayElement.dataset.day;
+                const month = dayElement.dataset.month;
+                const year = dayElement.dataset.year;
+                
+                selectedDay = { day, month, year };
+                modalDayTitle.textContent = `Edit Day: ${day}/${parseInt(month) + 1}/${year}`;
+                
+                // Load existing data if available
+                const dayData = getDayData(year, month, day);
+                dayNotes.value = dayData ? dayData.notes : '';
+                
+                // Load drawing if available
+                if (dayData && dayData.drawing) {
+                    const img = new Image();
+                    img.onload = function() {
+                        canvasContext.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
+                        canvasContext.drawImage(img, 0, 0);
+                    };
+                    img.src = dayData.drawing;
+                } else {
+                    canvasContext.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
+                }
+                
+                // Reset UI state
+                drawSection.style.display = 'none';
+                noteSection.style.display = 'block';
+                miniGame.style.display = 'none';
+                
+                // Show modal
+                dayModal.style.display = 'flex';
+            }
+            
+            function closeModal() {
+                dayModal.style.display = 'none';
+            }
+            
+            function saveDayData() {
+                if (!selectedDay) return;
+                
+                const notes = dayNotes.value;
+                const drawing = drawingCanvas.toDataURL();
+                
+                // Save to localStorage
+                const key = `day-${selectedDay.year}-${selectedDay.month}-${selectedDay.day}`;
+                localStorage.setItem(key, JSON.stringify({
+                    notes,
+                    drawing
+                }));
+                
+                // Update calendar display
+                renderCalendar();
+                closeModal();
+            }
+            
+            function getDayData(year, month, day) {
+                const key = `day-${year}-${month}-${day}`;
+                const data = localStorage.getItem(key);
+                return data ? JSON.parse(data) : null;
+            }
+            
+            function toggleDrawing() {
+                if (drawSection.style.display === 'none') {
+                    drawSection.style.display = 'block';
+                    noteSection.style.display = 'none';
+                    miniGame.style.display = 'none';
+                    toggleDrawButton.textContent = 'Notes';
+                } else {
+                    drawSection.style.display = 'none';
+                    noteSection.style.display = 'block';
+                    miniGame.style.display = 'none';
+                    toggleDrawButton.textContent = 'Draw';
+                }
+            }
+            
+            function toggleGame() {
+                if (miniGame.style.display === 'none') {
+                    miniGame.style.display = 'block';
+                    noteSection.style.display = 'none';
+                    drawSection.style.display = 'none';
+                    toggleDrawButton.textContent = 'Draw';
+                    
+                    // Reset game state
+                    gameClicks = 0;
+                    gameStartTime = Date.now();
+                    gameScore.textContent = 'Score: 0';
+                    gameButton.textContent = 'Click Me!';
+                } else {
+                    miniGame.style.display = 'none';
+                    noteSection.style.display = 'block';
+                }
+            }
+            
+            function handleGameClick() {
+                gameClicks++;
+                gameScore.textContent = `Score: ${gameClicks}`;
+                
+                if (gameClicks >= 10) {
+                    const timeTaken = (Date.now() - gameStartTime) / 1000;
+                    gameButton.textContent = 'Completed!';
+                    gameScore.textContent = `Time: ${timeTaken.toFixed(2)}s`;
+                    
+                    // Add note about game completion
+                    dayNotes.value = `${dayNotes.value}\n\nCompleted mini-game in ${timeTaken.toFixed(2)} seconds!`.trim();
+                }
+            }
+            
+            function startDrawing(e) {
+                isDrawing = true;
+                draw(e);
+            }
+            
+            function draw(e) {
+                if (!isDrawing) return;
+                
+                const rect = drawingCanvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                canvasContext.strokeStyle = currentTool === 'eraser' ? '#FFFFFF' : drawColor;
+                canvasContext.lineWidth = currentTool === 'eraser' ? 20 : 2;
+                
+                canvasContext.lineTo(x, y);
+                canvasContext.stroke();
+                canvasContext.beginPath();
+                canvasContext.moveTo(x, y);
+            }
+            
+            function stopDrawing() {
+                isDrawing = false;
+                canvasContext.beginPath();
+            }
+            
+            function handleTouchStart(e) {
+                e.preventDefault();
+                const touch = e.touches[0];
+                const mouseEvent = new MouseEvent('mousedown', {
+                    clientX: touch.clientX,
+                    clientY: touch.clientY
+                });
+                drawingCanvas.dispatchEvent(mouseEvent);
+            }
+            
+            function handleTouchMove(e) {
+                e.preventDefault();
+                const touch = e.touches[0];
+                const mouseEvent = new MouseEvent('mousemove', {
+                    clientX: touch.clientX,
+                    clientY: touch.clientY
+                });
+                drawingCanvas.dispatchEvent(mouseEvent);
+            }
+            
+            function handleTouchEnd(e) {
+                e.preventDefault();
+                const mouseEvent = new MouseEvent('mouseup', {});
+                drawingCanvas.dispatchEvent(mouseEvent);
+            }
+            
+            function showNotification(message) {
+                notification.textContent = message;
+                notification.classList.add('show');
+                
+                setTimeout(() => {
+                    notification.classList.remove('show');
+                }, 3000);
+            }
+            
+            function exportCalendar(format) {
+                showNotification("Preparing your calendar for export...");
+                
+                // Use html2canvas to capture the calendar
+                html2canvas(calendarToExport, {
+                    scale: 2, // Higher quality
+                    useCORS: true,
+                    logging: false
+                }).then(canvas => {
+                    if (format === 'pdf') {
+                        // Use jsPDF for PDF export
+                        const { jsPDF } = window.jspdf;
+                        const doc = new jsPDF('landscape', 'mm', 'a4');
+                        
+                        // Add calendar title
+                        doc.setFontSize(20);
+                        doc.text(currentMonthElement.textContent, 105, 20, { align: 'center' });
+                        
+                        // Convert canvas to image data
+                        const imgData = canvas.toDataURL('image/jpeg', 0.9);
+                        
+                        // Calculate dimensions to fit on PDF page
+                        const pageWidth = doc.internal.pageSize.getWidth();
+                        const pageHeight = doc.internal.pageSize.getHeight();
+                        const imgWidth = pageWidth - 20; // Margin
+                        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+                        
+                        // Add image to PDF
+                        doc.addImage(imgData, 'JPEG', 10, 30, imgWidth, imgHeight);
+                        
+                        // Save the PDF
+                        doc.save(`calendar-${currentMonthElement.textContent.replace(' ', '-')}.pdf`);
+                    } else {
+                        // For image formats, create a download link
+                        const link = document.createElement('a');
+                        link.download = `calendar-${currentMonthElement.textContent.replace(' ', '-')}.${format}`;
+                        link.href = format === 'png' ? canvas.toDataURL('image/png') : canvas.toDataURL('image/jpeg', 0.9);
+                        link.click();
+                    }
+                    
+                    showNotification("Calendar exported successfully!");
+                }).catch(error => {
+                    console.error('Error exporting calendar:', error);
+                    showNotification("Error exporting calendar. Please try again.");
+                });
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Report Card Maker</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #f3f4f6;
+    }
+    
+    .card {
+      background: white;
+      border-radius: 0.5rem;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+    
+    .btn-primary {
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+      box-shadow: 0 1px 2px rgba(37, 99, 235, 0.2);
+      transition: all 0.2s ease;
+    }
+    
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 2px 4px rgba(37, 99, 235, 0.3);
+    }
+    
+    .btn-secondary {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      box-shadow: 0 1px 2px rgba(5, 150, 105, 0.2);
+    }
+    
+    .grade-A { background-color: #dcfce7; color: #166534; }
+    .grade-B { background-color: #dbeafe; color: #1e40af; }
+    .grade-C { background-color: #fef3c7; color: #92400e; }
+    .grade-D { background-color: #fee2e2; color: #991b1b; }
+    .grade-F { background-color: #f3f4f6; color: #6b7280; }
+    
+    .report-card {
+      width: 8.5in;
+      height: 11in;
+      background: white;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    
+    @media print {
+      body * {
+        visibility: hidden;
+      }
+      #reportCardPrint, #reportCardPrint * {
+        visibility: visible;
+      }
+      #reportCardPrint {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        box-shadow: none;
+      }
+    }
+  </style>
+</head>
+<body class="min-h-screen p-4 md:p-8">
+
+  <div class="max-w-6xl mx-auto">
+    <div class="card p-6 mb-6">
+      <h1 class="text-2xl font-bold text-gray-800 mb-2">Report Card Maker</h1>
+      <p class="text-gray-600">Create professional student report cards</p>
+    </div>
+    
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <!-- Input Form -->
+      <div class="lg:col-span-2">
+        <div class="card p-6 mb-6">
+          <h2 class="text-xl font-semibold text-gray-800 mb-4">Student Information</h2>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Student Name</label>
+              <input type="text" id="studentName" class="w-full p-2 border border-gray-300 rounded-md">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Student ID</label>
+              <input type="text" id="studentId" class="w-full p-2 border border-gray-300 rounded-md">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Grade Level</label>
+              <select id="gradeLevel" class="w-full p-2 border border-gray-300 rounded-md">
+                <option value="Kindergarten">Kindergarten</option>
+                <option value="1st Grade">1st Grade</option>
+                <option value="2nd Grade">2nd Grade</option>
+                <option value="3rd Grade">3rd Grade</option>
+                <option value="4th Grade">4th Grade</option>
+                <option value="5th Grade">5th Grade</option>
+                <option value="6th Grade">6th Grade</option>
+                <option value="7th Grade">7th Grade</option>
+                <option value="8th Grade">8th Grade</option>
+                <option value="9th Grade">9th Grade</option>
+                <option value="10th Grade">10th Grade</option>
+                <option value="11th Grade">11th Grade</option>
+                <option value="12th Grade">12th Grade</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">School Year</label>
+              <input type="text" id="schoolYear" class="w-full p-2 border border-gray-300 rounded-md" value="2023-2024">
+            </div>
+          </div>
+          
+          <div class="mb-6">
+            <label class="block text-sm font-medium text-gray-700 mb-1">School Name</label>
+            <input type="text" id="schoolName" class="w-full p-2 border border-gray-300 rounded-md" value="Sunshine Elementary School">
+          </div>
+          
+          <div class="mb-6">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Teacher Name</label>
+            <input type="text" id="teacherName" class="w-full p-2 border border-gray-300 rounded-md" value="Ms. Johnson">
+          </div>
+          
+          <div class="mb-6">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Principal Name</label>
+            <input type="text" id="principalName" class="w-full p-2 border border-gray-300 rounded-md" value="Dr. Smith">
+          </div>
+        </div>
+        
+        <div class="card p-6">
+          <h2 class="text-xl font-semibold text-gray-800 mb-4">Subjects & Grades</h2>
+          
+          <div id="subjectsContainer">
+            <!-- Subjects will be added here -->
+            <div class="subject-item grid grid-cols-12 gap-2 mb-3">
+              <div class="col-span-5">
+                <input type="text" class="subject-name w-full p-2 border border-gray-300 rounded-md" placeholder="Subject" value="Mathematics">
+              </div>
+              <div class="col-span-2">
+                <select class="subject-grade w-full p-2 border border-gray-300 rounded-md">
+                  <option value="A">A</option>
+                  <option value="B">B</option>
+                  <option value="C" selected>C</option>
+                  <option value="D">D</option>
+                  <option value="F">F</option>
+                </select>
+              </div>
+              <div class="col-span-4">
+                <input type="text" class="subject-comments w-full p-2 border border-gray-300 rounded-md" placeholder="Comments" value="Shows good effort">
+              </div>
+              <div class="col-span-1 flex items-center justify-center">
+                <button class="remove-subject text-red-500 hover:text-red-700">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+            
+            <div class="subject-item grid grid-cols-12 gap-2 mb-3">
+              <div class="col-span-5">
+                <input type="text" class="subject-name w-full p-2 border border-gray-300 rounded-md" placeholder="Subject" value="English Language Arts">
+              </div>
+              <div class="col-span-2">
+                <select class="subject-grade w-full p-2 border border-gray-300 rounded-md">
+                  <option value="A">A</option>
+                  <option value="B" selected>B</option>
+                  <option value="C">C</option>
+                  <option value="D">D</option>
+                  <option value="F">F</option>
+                </select>
+              </div>
+              <div class="col-span-4">
+                <input type="text" class="subject-comments w-full p-2 border border-gray-300 rounded-md" placeholder="Comments" value="Excellent reading skills">
+              </div>
+              <div class="col-span-1 flex items-center justify-center">
+                <button class="remove-subject text-red-500 hover:text-red-700">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+          
+          <button id="addSubject" class="btn-primary text-white px-4 py-2 rounded-md text-sm mt-3">
+            + Add Subject
+          </button>
+        </div>
+        
+        <div class="card p-6 mt-6">
+          <h2 class="text-xl font-semibold text-gray-800 mb-4">Additional Comments</h2>
+          <textarea id="additionalComments" class="w-full p-3 border border-gray-300 rounded-md" rows="4" placeholder="Enter general comments about the student's performance..."></textarea>
+        </div>
+        
+        <div class="flex justify-end mt-6">
+          <button id="generateReport" class="btn-primary text-white px-6 py-3 rounded-md font-medium">
+            Generate Report Card
+          </button>
+        </div>
+      </div>
+      
+      <!-- Report Card Preview -->
+      <div class="lg:col-span-1">
+        <div class="card p-6 sticky top-4">
+          <h2 class="text-xl font-semibold text-gray-800 mb-4">Preview</h2>
+          
+          <div id="reportCardPrint" class="report-card p-8 mx-auto">
+            <div class="text-center mb-6">
+              <h1 class="text-2xl font-bold mb-1" id="previewSchoolName">Sunshine Elementary School</h1>
+              <h2 class="text-lg" id="previewReportCardTitle">Report Card</h2>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-4 mb-6">
+              <div>
+                <p class="text-sm text-gray-600">Student Name:</p>
+                <p class="font-medium" id="previewStudentName">John Doe</p>
+              </div>
+              <div>
+                <p class="text-sm text-gray-600">Student ID:</p>
+                <p class="font-medium" id="previewStudentId">12345</p>
+              </div>
+              <div>
+                <p class="text-sm text-gray-600">Grade Level:</p>
+                <p class="font-medium" id="previewGradeLevel">5th Grade</p>
+              </div>
+              <div>
+                <p class="text-sm text-gray-600">School Year:</p>
+                <p class="font-medium" id="previewSchoolYear">2023-2024</p>
+              </div>
+            </div>
+            
+            <table class="w-full mb-6">
+              <thead>
+                <tr class="border-b border-gray-200">
+                  <th class="text-left py-2">Subject</th>
+                  <th class="text-center py-2">Grade</th>
+                  <th class="text-left py-2">Comments</th>
+                </tr>
+              </thead>
+              <tbody id="previewSubjects">
+                <!-- Subjects will be added here -->
+                <tr class="border-b border-gray-100">
+                  <td class="py-2">Mathematics</td>
+                  <td class="text-center py-2"><span class="grade-C px-2 py-1 rounded">C</span></td>
+                  <td class="py-2 text-sm">Shows good effort</td>
+                </tr>
+                <tr class="border-b border-gray-100">
+                  <td class="py-2">English Language Arts</td>
+                  <td class="text-center py-2"><span class="grade-B px-2 py-1 rounded">B</span></td>
+                  <td class="py-2 text-sm">Excellent reading skills</td>
+                </tr>
+              </tbody>
+            </table>
+            
+            <div class="mb-6">
+              <h3 class="font-semibold mb-2">Additional Comments:</h3>
+              <p id="previewAdditionalComments" class="text-sm">No additional comments</p>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-4 mt-8">
+              <div>
+                <p class="text-sm text-gray-600 mb-1">Teacher:</p>
+                <p class="font-medium" id="previewTeacherName">Ms. Johnson</p>
+              </div>
+              <div>
+                <p class="text-sm text-gray-600 mb-1">Principal:</p>
+                <p class="font-medium" id="previewPrincipalName">Dr. Smith</p>
+              </div>
+            </div>
+            
+            <div class="text-center text-xs text-gray-500 mt-8">
+              <p>Generated by Report Card Maker</p>
+            </div>
+          </div>
+          
+          <div class="flex justify-center mt-4">
+            <button id="printReport" class="btn-secondary text-white px-6 py-2 rounded-md font-medium">
+              Print Report Card
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // DOM Elements
+    const studentName = document.getElementById('studentName');
+    const studentId = document.getElementById('studentId');
+    const gradeLevel = document.getElementById('gradeLevel');
+    const schoolYear = document.getElementById('schoolYear');
+    const schoolName = document.getElementById('schoolName');
+    const teacherName = document.getElementById('teacherName');
+    const principalName = document.getElementById('principalName');
+    const subjectsContainer = document.getElementById('subjectsContainer');
+    const additionalComments = document.getElementById('additionalComments');
+    const addSubjectBtn = document.getElementById('addSubject');
+    const generateReportBtn = document.getElementById('generateReport');
+    const printReportBtn = document.getElementById('printReport');
+    
+    // Preview Elements
+    const previewStudentName = document.getElementById('previewStudentName');
+    const previewStudentId = document.getElementById('previewStudentId');
+    const previewGradeLevel = document.getElementById('previewGradeLevel');
+    const previewSchoolYear = document.getElementById('previewSchoolYear');
+    const previewSchoolName = document.getElementById('previewSchoolName');
+    const previewTeacherName = document.getElementById('previewTeacherName');
+    const previewPrincipalName = document.getElementById('previewPrincipalName');
+    const previewSubjects = document.getElementById('previewSubjects');
+    const previewAdditionalComments = document.getElementById('previewAdditionalComments');
+    
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      setupEventListeners();
+      updatePreview();
+    });
+    
+    // Set up event listeners
+    function setupEventListeners() {
+      // Add subject button
+      addSubjectBtn.addEventListener('click', addSubject);
+      
+      // Generate report button
+      generateReportBtn.addEventListener('click', updatePreview);
+      
+      // Print report button
+      printReportBtn.addEventListener('click', printReportCard);
+      
+      // Input fields that should update preview on change
+      const previewInputs = [
+        studentName, studentId, gradeLevel, schoolYear, 
+        schoolName, teacherName, principalName, additionalComments
+      ];
+      
+      previewInputs.forEach(input => {
+        input.addEventListener('input', updatePreview);
+      });
+      
+      // Handle subject removal (delegated event)
+      subjectsContainer.addEventListener('click', (e) => {
+        if (e.target.classList.contains('remove-subject') || 
+            e.target.closest('.remove-subject')) {
+          const subjectItem = e.target.closest('.subject-item');
+          if (subjectItem) {
+            subjectItem.remove();
+            updatePreview();
+          }
+        }
+      });
+      
+      // Handle subject changes (delegated events)
+      subjectsContainer.addEventListener('input', (e) => {
+        if (e.target.classList.contains('subject-name') || 
+            e.target.classList.contains('subject-grade') || 
+            e.target.classList.contains('subject-comments')) {
+          updatePreview();
+        }
+      });
+    }
+    
+    // Add a new subject row
+    function addSubject() {
+      const subjectItem = document.createElement('div');
+      subjectItem.className = 'subject-item grid grid-cols-12 gap-2 mb-3';
+      subjectItem.innerHTML = `
+        <div class="col-span-5">
+          <input type="text" class="subject-name w-full p-2 border border-gray-300 rounded-md" placeholder="Subject">
+        </div>
+        <div class="col-span-2">
+          <select class="subject-grade w-full p-2 border border-gray-300 rounded-md">
+            <option value="A">A</option>
+            <option value="B">B</option>
+            <option value="C" selected>C</option>
+            <option value="D">D</option>
+            <option value="F">F</option>
+          </select>
+        </div>
+        <div class="col-span-4">
+          <input type="text" class="subject-comments w-full p-2 border border-gray-300 rounded-md" placeholder="Comments">
+        </div>
+        <div class="col-span-1 flex items-center justify-center">
+          <button class="remove-subject text-red-500 hover:text-red-700">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+          </button>
+        </div>
+      `;
+      
+      subjectsContainer.appendChild(subjectItem);
+      updatePreview();
+    }
+    
+    // Update the preview with current form data
+    function updatePreview() {
+      // Basic student info
+      previewStudentName.textContent = studentName.value || 'Student Name';
+      previewStudentId.textContent = studentId.value || 'ID';
+      previewGradeLevel.textContent = gradeLevel.value;
+      previewSchoolYear.textContent = schoolYear.value;
+      previewSchoolName.textContent = schoolName.value;
+      previewTeacherName.textContent = teacherName.value;
+      previewPrincipalName.textContent = principalName.value;
+      
+      // Additional comments
+      previewAdditionalComments.textContent = additionalComments.value || 'No additional comments';
+      
+      // Subjects
+      previewSubjects.innerHTML = '';
+      const subjectItems = document.querySelectorAll('.subject-item');
+      
+      subjectItems.forEach(item => {
+        const name = item.querySelector('.subject-name').value || 'Subject';
+        const grade = item.querySelector('.subject-grade').value;
+        const comments = item.querySelector('.subject-comments').value || '';
+        
+        const row = document.createElement('tr');
+        row.className = 'border-b border-gray-100';
+        row.innerHTML = `
+          <td class="py-2">${name}</td>
+          <td class="text-center py-2"><span class="grade-${grade} px-2 py-1 rounded">${grade}</span></td>
+          <td class="py-2 text-sm">${comments}</td>
+        `;
+        
+        previewSubjects.appendChild(row);
+      });
+    }
+    
+    // Print the report card
+    function printReportCard() {
+      window.print();
+    }
+  </script>
+</body>
+</html>

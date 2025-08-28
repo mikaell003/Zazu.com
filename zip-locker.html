@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Zip Locker - Secure File Encryption</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+    }
+    
+    .card {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    }
+    
+    .btn-primary {
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+      box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2);
+      transition: all 0.3s ease;
+    }
+    
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 8px rgba(37, 99, 235, 0.3);
+    }
+    
+    .btn-secondary {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      box-shadow: 0 4px 6px rgba(5, 150, 105, 0.2);
+    }
+    
+    .file-dropzone {
+      border: 2px dashed #cbd5e1;
+      transition: all 0.3s ease;
+    }
+    
+    .file-dropzone.active {
+      border-color: #3b82f6;
+      background-color: #f0f7ff;
+    }
+    
+    .toast {
+      animation: fadeInOut 3s ease-in-out forwards;
+    }
+    
+    @keyframes fadeInOut {
+      0% { opacity: 0; transform: translateY(10px); }
+      10% { opacity: 1; transform: translateY(0); }
+      90% { opacity: 1; transform: translateY(0); }
+      100% { opacity: 0; transform: translateY(-10px); }
+    }
+  </style>
+</head>
+<body class="min-h-screen p-4 md:p-8 flex items-center justify-center">
+
+  <div class="card max-w-2xl w-full p-6 md:p-8">
+    <div class="text-center mb-8">
+      <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-100 mb-4">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+        </svg>
+      </div>
+      <h1 class="text-2xl font-bold text-gray-800 mb-2">Zip Locker</h1>
+      <p class="text-gray-600">Encrypt & Decrypt Files Securely</p>
+    </div>
+
+    <!-- Tabs -->
+    <div class="flex border-b border-gray-200 mb-6">
+      <button id="encryptTab" class="tab active px-4 py-2 text-sm font-medium">Encrypt</button>
+      <button id="decryptTab" class="tab px-4 py-2 text-sm font-medium">Decrypt</button>
+    </div>
+
+    <!-- Encrypt Section -->
+    <div id="encryptSection">
+      <div class="file-dropzone p-8 rounded-lg mb-4 text-center cursor-pointer" id="encryptDropzone">
+        <input type="file" id="encryptFileInput" class="hidden">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-gray-400 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+        </svg>
+        <p class="text-gray-600 mb-1">Drag & drop a file or <span class="text-blue-600">click to browse</span></p>
+        <p class="text-xs text-gray-500">Supports any file type (ZIP, PDF, images, etc.)</p>
+      </div>
+      
+      <div class="mb-4">
+        <label for="encryptPassword" class="block text-sm font-medium text-gray-700 mb-1">Encryption Password</label>
+        <input id="encryptPassword" type="password" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+               placeholder="Enter a strong password">
+      </div>
+      
+      <button id="encryptBtn" class="btn-primary text-white px-6 py-3 rounded-lg font-medium w-full mb-4" disabled>
+        Encrypt File
+      </button>
+      
+      <div class="hidden" id="encryptResult">
+        <div class="p-4 bg-green-50 rounded-lg mb-4">
+          <div class="flex items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-600 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+            <span class="text-green-800">File encrypted successfully!</span>
+          </div>
+        </div>
+        <button id="downloadEncrypted" class="btn-secondary text-white px-6 py-3 rounded-lg font-medium w-full">
+          Download Encrypted File (.locked)
+        </button>
+      </div>
+    </div>
+
+    <!-- Decrypt Section -->
+    <div id="decryptSection" class="hidden">
+      <div class="file-dropzone p-8 rounded-lg mb-4 text-center cursor-pointer" id="decryptDropzone">
+        <input type="file" id="decryptFileInput" class="hidden" accept=".locked">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-gray-400 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+        <p class="text-gray-600 mb-1">Drag & drop a <span class="font-medium">.locked</span> file</p>
+        <p class="text-xs text-gray-500">Only files encrypted with Zip Locker can be decrypted</p>
+      </div>
+      
+      <div class="mb-4">
+        <label for="decryptPassword" class="block text-sm font-medium text-gray-700 mb-1">Decryption Password</label>
+        <input id="decryptPassword" type="password" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+               placeholder="Enter the password used for encryption">
+      </div>
+      
+      <button id="decryptBtn" class="btn-secondary text-white px-6 py-3 rounded-lg font-medium w-full mb-4" disabled>
+        Decrypt File
+      </button>
+      
+      <div class="hidden" id="decryptResult">
+        <div class="p-4 bg-green-50 rounded-lg mb-4">
+          <div class="flex items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-green-600 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+            <span class="text-green-800">File decrypted successfully!</span>
+          </div>
+        </div>
+        <button id="downloadDecrypted" class="btn-primary text-white px-6 py-3 rounded-lg font-medium w-full">
+          Download Original File
+        </button>
+      </div>
+    </div>
+
+    <div class="text-center text-xs text-gray-500 mt-8">
+      <p>All encryption/decryption happens in your browser. Files are never uploaded to a server.</p>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="fixed bottom-4 right-4 card px-4 py-3 hidden toast"></div>
+
+  <script>
+    // DOM Elements
+    const encryptTab = document.getElementById('encryptTab');
+    const decryptTab = document.getElementById('decryptTab');
+    const encryptSection = document.getElementById('encryptSection');
+    const decryptSection = document.getElementById('decryptSection');
+    
+    // Encrypt Elements
+    const encryptDropzone = document.getElementById('encryptDropzone');
+    const encryptFileInput = document.getElementById('encryptFileInput');
+    const encryptPassword = document.getElementById('encryptPassword');
+    const encryptBtn = document.getElementById('encryptBtn');
+    const encryptResult = document.getElementById('encryptResult');
+    const downloadEncrypted = document.getElementById('downloadEncrypted');
+    
+    // Decrypt Elements
+    const decryptDropzone = document.getElementById('decryptDropzone');
+    const decryptFileInput = document.getElementById('decryptFileInput');
+    const decryptPassword = document.getElementById('decryptPassword');
+    const decryptBtn = document.getElementById('decryptBtn');
+    const decryptResult = document.getElementById('decryptResult');
+    const downloadDecrypted = document.getElementById('downloadDecrypted');
+    
+    // Toast
+    const toast = document.getElementById('toast');
+    
+    // App State
+    let selectedFile = null;
+    let encryptedFile = null;
+    let decryptedFile = null;
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      setupEventListeners();
+    });
+
+    // Set up event listeners
+    function setupEventListeners() {
+      // Tab switching
+      encryptTab.addEventListener('click', () => {
+        encryptTab.classList.add('active');
+        decryptTab.classList.remove('active');
+        encryptSection.classList.remove('hidden');
+        decryptSection.classList.add('hidden');
+        resetEncryptState();
+      });
+      
+      decryptTab.addEventListener('click', () => {
+        decryptTab.classList.add('active');
+        encryptTab.classList.remove('active');
+        decryptSection.classList.remove('hidden');
+        encryptSection.classList.add('hidden');
+        resetDecryptState();
+      });
+      
+      // Encrypt file selection
+      encryptDropzone.addEventListener('click', () => encryptFileInput.click());
+      encryptFileInput.addEventListener('change', (e) => handleFileSelect(e, 'encrypt'));
+      
+      // Decrypt file selection
+      decryptDropzone.addEventListener('click', () => decryptFileInput.click());
+      decryptFileInput.addEventListener('change', (e) => handleFileSelect(e, 'decrypt'));
+      
+      // Drag and drop
+      ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        encryptDropzone.addEventListener(eventName, preventDefaults, false);
+        decryptDropzone.addEventListener(eventName, preventDefaults, false);
+      });
+      
+      ['dragenter', 'dragover'].forEach(eventName => {
+        encryptDropzone.addEventListener(eventName, highlightDropzone, false);
+        decryptDropzone.addEventListener(eventName, highlightDropzone, false);
+      });
+      
+      ['dragleave', 'drop'].forEach(eventName => {
+        encryptDropzone.addEventListener(eventName, unhighlightDropzone, false);
+        decryptDropzone.addEventListener(eventName, unhighlightDropzone, false);
+      });
+      
+      encryptDropzone.addEventListener('drop', (e) => handleDrop(e, 'encrypt'), false);
+      decryptDropzone.addEventListener('drop', (e) => handleDrop(e, 'decrypt'), false);
+      
+      // Encrypt/Decrypt buttons
+      encryptBtn.addEventListener('click', encryptFile);
+      decryptBtn.addEventListener('click', decryptFile);
+      
+      // Download buttons
+      downloadEncrypted.addEventListener('click', () => downloadFile(encryptedFile, 'encrypted.locked'));
+      downloadDecrypted.addEventListener('click', () => downloadFile(decryptedFile));
+      
+      // Enable buttons when password is entered
+      encryptPassword.addEventListener('input', toggleEncryptButton);
+      decryptPassword.addEventListener('input', toggleDecryptButton);
+    }
+    
+    // Prevent default drag/drop behavior
+    function preventDefaults(e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    
+    // Highlight dropzone when dragging over
+    function highlightDropzone(e) {
+      e.currentTarget.classList.add('active');
+    }
+    
+    // Remove highlight when leaving
+    function unhighlightDropzone(e) {
+      e.currentTarget.classList.remove('active');
+    }
+    
+    // Handle dropped files
+    function handleDrop(e, mode) {
+      const dt = e.dataTransfer;
+      const files = dt.files;
+      
+      if (files.length > 0) {
+        if (mode === 'encrypt') {
+          encryptFileInput.files = files;
+          handleFileSelect({ target: encryptFileInput }, 'encrypt');
+        } else {
+          decryptFileInput.files = files;
+          handleFileSelect({ target: decryptFileInput }, 'decrypt');
+        }
+      }
+    }
+    
+    // Handle file selection
+    function handleFileSelect(e, mode) {
+      const file = e.target.files[0];
+      
+      if (!file) return;
+      
+      if (mode === 'decrypt' && !file.name.endsWith('.locked')) {
+        showToast('Only .locked files can be decrypted', 'error');
+        return;
+      }
+      
+      selectedFile = file;
+      
+      if (mode === 'encrypt') {
+        encryptDropzone.innerHTML = `
+          <div class="text-left">
+            <p class="font-medium text-gray-800 truncate">${file.name}</p>
+            <p class="text-sm text-gray-500">${formatFileSize(file.size)}</p>
+          </div>
+        `;
+        toggleEncryptButton();
+      } else {
+        decryptDropzone.innerHTML = `
+          <div class="text-left">
+            <p class="font-medium text-gray-800 truncate">${file.name}</p>
+            <p class="text-sm text-gray-500">${formatFileSize(file.size)}</p>
+          </div>
+        `;
+        toggleDecryptButton();
+      }
+    }
+    
+    // Toggle encrypt button state
+    function toggleEncryptButton() {
+      encryptBtn.disabled = !(selectedFile && encryptPassword.value.length >= 4);
+    }
+    
+    // Toggle decrypt button state
+    function toggleDecryptButton() {
+      decryptBtn.disabled = !(selectedFile && decryptPassword.value.length >= 1);
+    }
+    
+    // Format file size
+    function formatFileSize(bytes) {
+      if (bytes === 0) return '0 Bytes';
+      
+      const k = 1024;
+      const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+    
+    // Encrypt file
+    async function encryptFile() {
+      if (!selectedFile || !encryptPassword.value) return;
+      
+      try {
+        showToast('Encrypting file...');
+        
+        const fileBuffer = await readFileAsArrayBuffer(selectedFile);
+        const encrypted = await encryptData(fileBuffer, encryptPassword.value);
+        
+        encryptedFile = new Blob([encrypted], { type: 'application/octet-stream' });
+        
+        encryptResult.classList.remove('hidden');
+        showToast('File encrypted successfully!');
+      } catch (error) {
+        console.error('Encryption error:', error);
+        showToast('Encryption failed. Please try again.', 'error');
+      }
+    }
+    
+    // Decrypt file
+    async function decryptFile() {
+      if (!selectedFile || !decryptPassword.value) return;
+      
+      try {
+        showToast('Decrypting file...');
+        
+        const fileBuffer = await readFileAsArrayBuffer(selectedFile);
+        const decrypted = await decryptData(fileBuffer, decryptPassword.value);
+        
+        decryptedFile = new Blob([decrypted], { type: 'application/octet-stream' });
+        
+        decryptResult.classList.remove('hidden');
+        showToast('File decrypted successfully!');
+      } catch (error) {
+        console.error('Decryption error:', error);
+        showToast('Decryption failed. Wrong password or corrupted file.', 'error');
+      }
+    }
+    
+    // Read file as ArrayBuffer
+    function readFileAsArrayBuffer(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsArrayBuffer(file);
+      });
+    }
+    
+    // Encrypt data using AES-GCM
+    async function encryptData(data, password) {
+      const salt = crypto.getRandomValues(new Uint8Array(16));
+      const iv = crypto.getRandomValues(new Uint8Array(12));
+      
+      const keyMaterial = await crypto.subtle.importKey(
+        'raw',
+        new TextEncoder().encode(password),
+        { name: 'PBKDF2' },
+        false,
+        ['deriveKey']
+      );
+      
+      const key = await crypto.subtle.deriveKey(
+        {
+          name: 'PBKDF2',
+          salt: salt,
+          iterations: 100000,
+          hash: 'SHA-256'
+        },
+        keyMaterial,
+        { name: 'AES-GCM', length: 256 },
+        false,
+        ['encrypt']
+      );
+      
+      const encrypted = await crypto.subtle.encrypt(
+        {
+          name: 'AES-GCM',
+          iv: iv
+        },
+        key,
+        data
+      );
+      
+      // Combine salt + iv + encrypted data
+      const combined = new Uint8Array(salt.length + iv.length + encrypted.byteLength);
+      combined.set(salt, 0);
+      combined.set(iv, salt.length);
+      combined.set(new Uint8Array(encrypted), salt.length + iv.length);
+      
+      return combined;
+    }
+    
+    // Decrypt data using AES-GCM
+    async function decryptData(data, password) {
+      const dataArray = new Uint8Array(data);
+      const salt = dataArray.slice(0, 16);
+      const iv = dataArray.slice(16, 28);
+      const encrypted = dataArray.slice(28);
+      
+      const keyMaterial = await crypto.subtle.importKey(
+        'raw',
+        new TextEncoder().encode(password),
+        { name: 'PBKDF2' },
+        false,
+        ['deriveKey']
+      );
+      
+      const key = await crypto.subtle.deriveKey(
+        {
+          name: 'PBKDF2',
+          salt: salt,
+          iterations: 100000,
+          hash: 'SHA-256'
+        },
+        keyMaterial,
+        { name: 'AES-GCM', length: 256 },
+        false,
+        ['decrypt']
+      );
+      
+      const decrypted = await crypto.subtle.decrypt(
+        {
+          name: 'AES-GCM',
+          iv: iv
+        },
+        key,
+        encrypted
+      );
+      
+      return decrypted;
+    }
+    
+    // Download file
+    function downloadFile(blob, filename = null) {
+      if (!blob) return;
+      
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename || selectedFile.name.replace('.locked', '');
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+    
+    // Reset encrypt state
+    function resetEncryptState() {
+      selectedFile = null;
+      encryptedFile = null;
+      encryptFileInput.value = '';
+      encryptPassword.value = '';
+      encryptBtn.disabled = true;
+      encryptResult.classList.add('hidden');
+      encryptDropzone.innerHTML = `
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-gray-400 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+        </svg>
+        <p class="text-gray-600 mb-1">Drag & drop a file or <span class="text-blue-600">click to browse</span></p>
+        <p class="text-xs text-gray-500">Supports any file type (ZIP, PDF, images, etc.)</p>
+      `;
+    }
+    
+    // Reset decrypt state
+    function resetDecryptState() {
+      selectedFile = null;
+      decryptedFile = null;
+      decryptFileInput.value = '';
+      decryptPassword.value = '';
+      decryptBtn.disabled = true;
+      decryptResult.classList.add('hidden');
+      decryptDropzone.innerHTML = `
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-gray-400 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+        <p class="text-gray-600 mb-1">Drag & drop a <span class="font-medium">.locked</span> file</p>
+        <p class="text-xs text-gray-500">Only files encrypted with Zip Locker can be decrypted</p>
+      `;
+    }
+    
+    // Show toast notification
+    function showToast(message, type = 'success') {
+      toast.textContent = message;
+      toast.className = `fixed bottom-4 right-4 card px-4 py-3 toast ${type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`;
+      toast.classList.remove('hidden');
+      
+      setTimeout(() => {
+        toast.classList.add('hidden');
+      }, 3000);
+    }
+  </script>
+</body>
+</html>

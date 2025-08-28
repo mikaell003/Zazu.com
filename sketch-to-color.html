@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sketch to Color Tool</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            width: 100%;
+            background-color: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+            margin-top: 20px;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 2.5rem;
+        }
+        
+        p.subtitle {
+            text-align: center;
+            color: #7f8c8d;
+            margin-bottom: 30px;
+            font-size: 1.1rem;
+        }
+        
+        .app-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        
+        .tools-panel {
+            flex: 1;
+            min-width: 250px;
+            background: #f8fafc;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+        
+        .canvas-container {
+            flex: 2;
+            min-width: 300px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .upload-container {
+            border: 3px dashed #3498db;
+            border-radius: 10px;
+            padding: 30px;
+            text-align: center;
+            margin-bottom: 20px;
+            transition: all 0.3s;
+            background-color: #f8fafc;
+        }
+        
+        .upload-container:hover {
+            background-color: #e8f4ff;
+            border-color: #2980b9;
+        }
+        
+        .upload-container.dragover {
+            background-color: #d6eaf8;
+            border-color: #2980b9;
+            transform: scale(1.02);
+        }
+        
+        .upload-icon {
+            font-size: 60px;
+            color: #3498db;
+            margin-bottom: 15px;
+        }
+        
+        .upload-text {
+            font-size: 18px;
+            color: #34495e;
+            margin-bottom: 20px;
+        }
+        
+        .browse-btn {
+            background-color: #3498db;
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        
+        .browse-btn:hover {
+            background-color: #2980b9;
+        }
+        
+        #file-input {
+            display: none;
+        }
+        
+        .tool-section {
+            margin-bottom: 20px;
+        }
+        
+        .tool-section h3 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            padding-bottom: 5px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        
+        .color-palette {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+        
+        .color-option {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: transform 0.2s;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .color-option:hover {
+            transform: scale(1.2);
+        }
+        
+        .color-option.active {
+            transform: scale(1.3);
+            box-shadow: 0 0 0 3px white, 0 0 0 5px #3498db;
+        }
+        
+        .tool-options {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .tool-btn {
+            padding: 10px 15px;
+            background: #e8f4ff;
+            border: 2px solid #3498db;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.3s;
+        }
+        
+        .tool-btn:hover {
+            background: #d6eaf8;
+        }
+        
+        .tool-btn.active {
+            background: #3498db;
+            color: white;
+        }
+        
+        .brush-size {
+            width: 100%;
+            margin: 10px 0;
+        }
+        
+        .canvas-wrapper {
+            position: relative;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            overflow: hidden;
+            background: #f8fafc;
+            margin-bottom: 20px;
+        }
+        
+        #drawing-canvas {
+            background: white;
+            display: block;
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .control-btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+        
+        .process-btn {
+            background-color: #2ecc71;
+            color: white;
+        }
+        
+        .process-btn:hover {
+            background-color: #27ae60;
+        }
+        
+        .download-btn {
+            background-color: #3498db;
+            color: white;
+        }
+        
+        .download-btn:hover {
+            background-color: #2980b9;
+        }
+        
+        .reset-btn {
+            background-color: #e74c3c;
+            color: white;
+        }
+        
+        .reset-btn:hover {
+            background-color: #c0392b;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .spinner {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #3498db;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        footer {
+            margin-top: 30px;
+            text-align: center;
+            color: #7f8c8d;
+            font-size: 0.9rem;
+        }
+        
+        @media (max-width: 768px) {
+            .app-container {
+                flex-direction: column;
+            }
+            
+            .upload-container {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>Sketch to Color Tool</h1>
+    <p class="subtitle">Upload hand-drawn sketches and add color with smart brushes</p>
+    
+    <div class="container">
+        <div class="app-container">
+            <div class="tools-panel">
+                <div class="upload-container" id="upload-container">
+                    <div class="upload-icon">📁</div>
+                    <p class="upload-text">Drag & drop your sketch here</p>
+                    <p class="upload-text">or</p>
+                    <button class="browse-btn" id="browse-btn">Browse Files</button>
+                    <input type="file" id="file-input" accept="image/*">
+                </div>
+                
+                <div class="tool-section">
+                    <h3>Colors</h3>
+                    <div class="color-palette">
+                        <div class="color-option active" style="background-color: #ff5252;" data-color="#ff5252"></div>
+                        <div class="color-option" style="background-color: #ff4081;" data-color="#ff4081"></div>
+                        <div class="color-option" style="background-color: #e040fb;" data-color="#e040fb"></div>
+                        <div class="color-option" style="background-color: #7c4dff;" data-color="#7c4dff"></div>
+                        <div class="color-option" style="background-color: #536dfe;" data-color="#536dfe"></div>
+                        <div class="color-option" style="background-color: #448aff;" data-color="#448aff"></div>
+                        <div class="color-option" style="background-color: #40c4ff;" data-color="#40c4ff"></div>
+                        <div class="color-option" style="background-color: #18ffff;" data-color="#18ffff"></div>
+                        <div class="color-option" style="background-color: #64ffda;" data-color="#64ffda"></div>
+                        <div class="color-option" style="background-color: #69f0ae;" data-color="#69f0ae"></div>
+                        <div class="color-option" style="background-color: #b2ff59;" data-color="#b2ff59"></div>
+                        <div class="color-option" style="background-color: #eeff41;" data-color="#eeff41"></div>
+                        <div class="color-option" style="background-color: #ffff00;" data-color="#ffff00"></div>
+                        <div class="color-option" style="background-color: #ffd740;" data-color="#ffd740"></div>
+                        <div class="color-option" style="background-color: #ffab40;" data-color="#ffab40"></div>
+                        <div class="color-option" style="background-color: #ff6e40;" data-color="#ff6e40"></div>
+                    </div>
+                    
+                    <div class="tool-options">
+                        <input type="color" id="custom-color" value="#ff5252" style="width: 60px; height: 40px;">
+                    </div>
+                </div>
+                
+                <div class="tool-section">
+                    <h3>Tools</h3>
+                    <div class="tool-options">
+                        <button class="tool-btn active" id="brush-tool">
+                            <span>🖌️</span> Brush
+                        </button>
+                        <button class="tool-btn" id="bucket-tool">
+                            <span>🪣</span> Fill
+                        </button>
+                        <button class="tool-btn" id="eraser-tool">
+                            <span>🧹</span> Eraser
+                        </button>
+                    </div>
+                    
+                    <div class="tool-section">
+                        <label for="brush-size">Brush Size: <span id="brush-size-value">10</span>px</label>
+                        <input type="range" id="brush-size" class="brush-size" min="1" max="50" value="10">
+                    </div>
+                    
+                    <div class="tool-options">
+                        <button class="tool-btn" id="auto-color-btn">
+                            <span>🎨</span> Auto Color
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="controls">
+                    <button class="control-btn download-btn" id="download-btn">Download</button>
+                    <button class="control-btn reset-btn" id="reset-btn">Reset</button>
+                </div>
+            </div>
+            
+            <div class="canvas-container">
+                <div class="canvas-wrapper">
+                    <canvas id="drawing-canvas" width="600" height="500"></canvas>
+                </div>
+                
+                <div class="loading" id="loading">
+                    <div class="spinner"></div>
+                    <p>Processing your image...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <footer>
+        <p>Note: This is a client-side application. Your images are processed entirely in your browser.</p>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const uploadContainer = document.getElementById('upload-container');
+            const fileInput = document.getElementById('file-input');
+            const browseBtn = document.getElementById('browse-btn');
+            const canvas = document.getElementById('drawing-canvas');
+            const ctx = canvas.getContext('2d');
+            const downloadBtn = document.getElementById('download-btn');
+            const resetBtn = document.getElementById('reset-btn');
+            const loading = document.getElementById('loading');
+            const brushTool = document.getElementById('brush-tool');
+            const bucketTool = document.getElementById('bucket-tool');
+            const eraserTool = document.getElementById('eraser-tool');
+            const autoColorBtn = document.getElementById('auto-color-btn');
+            const colorOptions = document.querySelectorAll('.color-option');
+            const customColor = document.getElementById('custom-color');
+            const brushSize = document.getElementById('brush-size');
+            const brushSizeValue = document.getElementById('brush-size-value');
+            
+            let isDrawing = false;
+            let lastX = 0;
+            let lastY = 0;
+            let selectedColor = '#ff5252';
+            let selectedTool = 'brush';
+            let originalImageData = null;
+            
+            // Set canvas background to white
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Event listeners for drag and drop
+            uploadContainer.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                uploadContainer.classList.add('dragover');
+            });
+            
+            uploadContainer.addEventListener('dragleave', function() {
+                uploadContainer.classList.remove('dragover');
+            });
+            
+            uploadContainer.addEventListener('drop', function(e) {
+                e.preventDefault();
+                uploadContainer.classList.remove('dragover');
+                
+                if (e.dataTransfer.files.length) {
+                    handleFile(e.dataTransfer.files[0]);
+                }
+            });
+            
+            // Event listener for browse button
+            browseBtn.addEventListener('click', function() {
+                fileInput.click();
+            });
+            
+            // Event listener for file input change
+            fileInput.addEventListener('change', function() {
+                if (fileInput.files.length) {
+                    handleFile(fileInput.files[0]);
+                }
+            });
+            
+            // Event listeners for tools
+            brushTool.addEventListener('click', function() {
+                selectedTool = 'brush';
+                setActiveTool(brushTool);
+            });
+            
+            bucketTool.addEventListener('click', function() {
+                selectedTool = 'bucket';
+                setActiveTool(bucketTool);
+            });
+            
+            eraserTool.addEventListener('click', function() {
+                selectedTool = 'eraser';
+                setActiveTool(eraserTool);
+            });
+            
+            autoColorBtn.addEventListener('click', function() {
+                autoColor();
+            });
+            
+            // Event listener for color options
+            colorOptions.forEach(option => {
+                option.addEventListener('click', function() {
+                    selectedColor = this.getAttribute('data-color');
+                    customColor.value = selectedColor;
+                    
+                    // Update active color
+                    colorOptions.forEach(opt => opt.classList.remove('active'));
+                    this.classList.add('active');
+                });
+            });
+            
+            // Event listener for custom color
+            customColor.addEventListener('change', function() {
+                selectedColor = this.value;
+                
+                // Update active color
+                colorOptions.forEach(opt => opt.classList.remove('active'));
+            });
+            
+            // Event listener for brush size
+            brushSize.addEventListener('input', function() {
+                brushSizeValue.textContent = this.value;
+            });
+            
+            // Event listener for download button
+            downloadBtn.addEventListener('click', function() {
+                downloadImage();
+            });
+            
+            // Event listener for reset button
+            resetBtn.addEventListener('click', function() {
+                resetCanvas();
+            });
+            
+            // Canvas drawing events
+            canvas.addEventListener('mousedown', startDrawing);
+            canvas.addEventListener('mousemove', draw);
+            canvas.addEventListener('mouseup', stopDrawing);
+            canvas.addEventListener('mouseout', stopDrawing);
+            
+            // Touch events for mobile devices
+            canvas.addEventListener('touchstart', handleTouchStart);
+            canvas.addEventListener('touchmove', handleTouchMove);
+            canvas.addEventListener('touchend', handleTouchEnd);
+            
+            // Handle the selected file
+            function handleFile(file) {
+                if (!file.type.match('image.*')) {
+                    alert('Please select an image file.');
+                    return;
+                }
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = new Image();
+                    img.onload = function() {
+                        // Scale image to fit canvas
+                        const scale = Math.min(canvas.width / img.width, canvas.height / img.height);
+                        const width = img.width * scale;
+                        const height = img.height * scale;
+                        const x = (canvas.width - width) / 2;
+                        const y = (canvas.height - height) / 2;
+                        
+                        // Clear canvas and draw image
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+                        ctx.fillStyle = 'white';
+                        ctx.fillRect(0, 0, canvas.width, canvas.height);
+                        ctx.drawImage(img, x, y, width, height);
+                        
+                        // Store original image data
+                        originalImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+            
+            // Set active tool
+            function setActiveTool(activeTool) {
+                const tools = [brushTool, bucketTool, eraserTool];
+                tools.forEach(tool => tool.classList.remove('active'));
+                activeTool.classList.add('active');
+            }
+            
+            // Start drawing
+            function startDrawing(e) {
+                isDrawing = true;
+                [lastX, lastY] = [e.offsetX, e.offsetY];
+                
+                if (selectedTool === 'bucket') {
+                    floodFill(e.offsetX, e.offsetY, selectedColor);
+                }
+            }
+            
+            // Draw on canvas
+            function draw(e) {
+                if (!isDrawing) return;
+                
+                ctx.lineJoin = 'round';
+                ctx.lineCap = 'round';
+                ctx.lineWidth = brushSize.value;
+                
+                if (selectedTool === 'brush') {
+                    ctx.strokeStyle = selectedColor;
+                    ctx.globalCompositeOperation = 'source-over';
+                } else if (selectedTool === 'eraser') {
+                    ctx.strokeStyle = 'white';
+                    ctx.globalCompositeOperation = 'destination-out';
+                }
+                
+                ctx.beginPath();
+                ctx.moveTo(lastX, lastY);
+                ctx.lineTo(e.offsetX, e.offsetY);
+                ctx.stroke();
+                
+                [lastX, lastY] = [e.offsetX, e.offsetY];
+            }
+            
+            // Stop drawing
+            function stopDrawing() {
+                isDrawing = false;
+            }
+            
+            // Handle touch start
+            function handleTouchStart(e) {
+                e.preventDefault();
+                const touch = e.touches[0];
+                const mouseEvent = new MouseEvent('mousedown', {
+                    clientX: touch.clientX,
+                    clientY: touch.clientY
+                });
+                canvas.dispatchEvent(mouseEvent);
+            }
+            
+            // Handle touch move
+            function handleTouchMove(e) {
+                e.preventDefault();
+                const touch = e.touches[0];
+                const mouseEvent = new MouseEvent('mousemove', {
+                    clientX: touch.clientX,
+                    clientY: touch.clientY
+                });
+                canvas.dispatchEvent(mouseEvent);
+            }
+            
+            // Handle touch end
+            function handleTouchEnd(e) {
+                e.preventDefault();
+                const mouseEvent = new MouseEvent('mouseup', {});
+                canvas.dispatchEvent(mouseEvent);
+            }
+            
+            // Flood fill algorithm
+            function floodFill(x, y, fillColor) {
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const pixels = imageData.data;
+                const stack = [[x, y]];
+                
+                // Get the color at the target pixel
+                const targetColor = getPixelColor(imageData, x, y);
+                
+                // Convert fill color to RGB
+                const fillR = parseInt(fillColor.substr(1, 2), 16);
+                const fillG = parseInt(fillColor.substr(3, 2), 16);
+                const fillB = parseInt(fillColor.substr(5, 2), 16);
+                
+                // If the target color is the same as the fill color, return
+                if (
+                    targetColor[0] === fillR &&
+                    targetColor[1] === fillG &&
+                    targetColor[2] === fillB
+                ) {
+                    return;
+                }
+                
+                while (stack.length) {
+                    const [currentX, currentY] = stack.pop();
+                    
+                    // Check if current pixel is within canvas bounds
+                    if (
+                        currentX < 0 ||
+                        currentX >= canvas.width ||
+                        currentY < 0 ||
+                        currentY >= canvas.height
+                    ) {
+                        continue;
+                    }
+                    
+                    // Get color of current pixel
+                    const currentColor = getPixelColor(imageData, currentX, currentY);
+                    
+                    // Check if current pixel matches the target color
+                    if (
+                        currentColor[0] === targetColor[0] &&
+                        currentColor[1] === targetColor[1] &&
+                        currentColor[2] === targetColor[2]
+                    ) {
+                        // Set the pixel to the fill color
+                        const index = (currentY * canvas.width + currentX) * 4;
+                        pixels[index] = fillR;
+                        pixels[index + 1] = fillG;
+                        pixels[index + 2] = fillB;
+                        pixels[index + 3] = 255; // Alpha
+                        
+                        // Add neighboring pixels to the stack
+                        stack.push([currentX + 1, currentY]);
+                        stack.push([currentX - 1, currentY]);
+                        stack.push([currentX, currentY + 1]);
+                        stack.push([currentX, currentY - 1]);
+                    }
+                }
+                
+                // Put the modified image data back to the canvas
+                ctx.putImageData(imageData, 0, 0);
+            }
+            
+            // Get pixel color from image data
+            function getPixelColor(imageData, x, y) {
+                const pixels = imageData.data;
+                const index = (y * canvas.width + x) * 4;
+                return [
+                    pixels[index],
+                    pixels[index + 1],
+                    pixels[index + 2]
+                ];
+            }
+            
+            // Auto color function (simplified)
+            function autoColor() {
+                loading.style.display = 'block';
+                
+                // Simulate processing time
+                setTimeout(() => {
+                    // This is a simplified auto-color effect
+                    // In a real application, you would use more advanced algorithms
+                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    const pixels = imageData.data;
+                    
+                    for (let i = 0; i < pixels.length; i += 4) {
+                        // Skip white pixels
+                        if (pixels[i] > 200 && pixels[i + 1] > 200 && pixels[i + 2] > 200) {
+                            continue;
+                        }
+                        
+                        // Apply a color based on pixel intensity
+                        const intensity = (pixels[i] + pixels[i + 1] + pixels[i + 2]) / 3;
+                        
+                        if (intensity < 85) {
+                            // Dark areas - blue
+                            pixels[i] = 50;
+                            pixels[i + 1] = 100;
+                            pixels[i + 2] = 200;
+                        } else if (intensity < 170) {
+                            // Medium areas - green
+                            pixels[i] = 100;
+                            pixels[i + 1] = 200;
+                            pixels[i + 2] = 100;
+                        } else {
+                            // Light areas - yellow
+                            pixels[i] = 240;
+                            pixels[i + 1] = 220;
+                            pixels[i + 2] = 100;
+                        }
+                    }
+                    
+                    ctx.putImageData(imageData, 0, 0);
+                    loading.style.display = 'none';
+                }, 1500);
+            }
+            
+            // Download the image
+            function downloadImage() {
+                const link = document.createElement('a');
+                link.download = 'colored-sketch.png';
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            }
+            
+            // Reset the canvas
+            function resetCanvas() {
+                if (originalImageData) {
+                    ctx.putImageData(originalImageData, 0, 0);
+                } else {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    ctx.fillStyle = 'white';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                }
+            }
+        });
+    </script>
+</body>
+</html>

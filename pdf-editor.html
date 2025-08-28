@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Editor/Annotator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #f5f5f5;
+            color: #333;
+        }
+
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        .app-header {
+            background-color: #2c3e50;
+            color: white;
+            padding: 10px 20px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        .app-header h1 {
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+        }
+
+        .toolbar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .tool-btn {
+            padding: 5px 10px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .tool-btn:hover {
+            background-color: #2980b9;
+        }
+
+        .tool-btn.active {
+            background-color: #16a085;
+        }
+
+        .tool-separator {
+            width: 1px;
+            height: 20px;
+            background-color: rgba(255, 255, 255, 0.3);
+            margin: 0 5px;
+        }
+
+        .main-content {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .sidebar {
+            width: 200px;
+            background-color: #ecf0f1;
+            border-right: 1px solid #bdc3c7;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .page-thumbnails {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .page-thumbnail {
+            border: 1px solid #bdc3c7;
+            cursor: pointer;
+            transition: border-color 0.2s;
+        }
+
+        .page-thumbnail:hover {
+            border-color: #3498db;
+        }
+
+        .page-thumbnail.active {
+            border-color: #e74c3c;
+        }
+
+        .pdf-viewer-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .pdf-controls {
+            padding: 10px;
+            background-color: #ecf0f1;
+            border-bottom: 1px solid #bdc3c7;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .nav-btn {
+            padding: 5px 10px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .nav-btn:hover {
+            background-color: #2980b9;
+        }
+
+        #page-jump {
+            width: 50px;
+            padding: 5px;
+            border: 1px solid #bdc3c7;
+            border-radius: 4px;
+        }
+
+        .zoom-controls {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .zoom-btn {
+            width: 25px;
+            height: 25px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .zoom-btn:hover {
+            background-color: #2980b9;
+        }
+
+        .pdf-viewer {
+            flex: 1;
+            position: relative;
+            overflow: auto;
+            background-color: #525659;
+        }
+
+        #pdf-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+        }
+
+        #annotation-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            cursor: crosshair;
+        }
+
+        input[type="color"] {
+            width: 30px;
+            height: 30px;
+            border: none;
+            cursor: pointer;
+        }
+
+        input[type="range"] {
+            width: 80px;
+            cursor: pointer;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                width: 100%;
+                height: 150px;
+                border-right: none;
+                border-bottom: 1px solid #bdc3c7;
+            }
+            
+            .page-thumbnails {
+                flex-direction: row;
+                overflow-x: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <header class="app-header">
+            <h1>PDF Editor & Annotator</h1>
+            <div class="toolbar">
+                <input type="file" id="pdf-upload" accept=".pdf" style="display: none;">
+                <button id="open-pdf" class="tool-btn">Open PDF</button>
+                <button id="save-pdf" class="tool-btn">Save PDF</button>
+                <div class="tool-separator"></div>
+                <button id="text-tool" class="tool-btn active">Text</button>
+                <button id="highlight-tool" class="tool-btn">Highlight</button>
+                <button id="pen-tool" class="tool-btn">Pen</button>
+                <button id="rectangle-tool" class="tool-btn">Rectangle</button>
+                <button id="eraser-tool" class="tool-btn">Eraser</button>
+                <div class="tool-separator"></div>
+                <input type="color" id="color-picker" value="#000000">
+                <input type="range" id="size-slider" min="1" max="20" value="3">
+                <div class="tool-separator"></div>
+                <button id="undo-btn" class="tool-btn">Undo</button>
+                <button id="clear-btn" class="tool-btn">Clear Page</button>
+            </div>
+        </header>
+
+        <div class="main-content">
+            <div class="sidebar">
+                <div class="page-thumbnails" id="page-thumbnails"></div>
+            </div>
+            <div class="pdf-viewer-container">
+                <div class="pdf-controls">
+                    <button id="prev-page" class="nav-btn">Previous</button>
+                    <span id="page-num">Page: 1</span>
+                    <span id="page-count">of 0</span>
+                    <button id="next-page" class="nav-btn">Next</button>
+                    <input type="number" id="page-jump" min="1" value="1">
+                    <button id="go-to-page" class="nav-btn">Go</button>
+                    <span class="zoom-controls">
+                        <button id="zoom-out" class="zoom-btn">-</button>
+                        <span id="zoom-level">100%</span>
+                        <button id="zoom-in" class="zoom-btn">+</button>
+                    </span>
+                </div>
+                <div class="pdf-viewer" id="pdf-viewer">
+                    <canvas id="pdf-canvas"></canvas>
+                    <canvas id="annotation-canvas"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // PDF.js worker path
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.worker.min.js';
+
+        // App state
+        const state = {
+            pdf: null,
+            currentPage: 1,
+            zoom: 1,
+            tool: 'text',
+            color: '#000000',
+            size: 3,
+            annotations: {},
+            undoStack: [],
+            redoStack: []
+        };
+
+        // DOM elements
+        const elements = {
+            pdfUpload: document.getElementById('pdf-upload'),
+            openPdfBtn: document.getElementById('open-pdf'),
+            savePdfBtn: document.getElementById('save-pdf'),
+            pdfCanvas: document.getElementById('pdf-canvas'),
+            annotationCanvas: document.getElementById('annotation-canvas'),
+            pageNum: document.getElementById('page-num'),
+            pageCount: document.getElementById('page-count'),
+            prevPageBtn: document.getElementById('prev-page'),
+            nextPageBtn: document.getElementById('next-page'),
+            pageJump: document.getElementById('page-jump'),
+            goToPageBtn: document.getElementById('go-to-page'),
+            zoomOutBtn: document.getElementById('zoom-out'),
+            zoomInBtn: document.getElementById('zoom-in'),
+            zoomLevel: document.getElementById('zoom-level'),
+            pageThumbnails: document.getElementById('page-thumbnails'),
+            textToolBtn: document.getElementById('text-tool'),
+            highlightToolBtn: document.getElementById('highlight-tool'),
+            penToolBtn: document.getElementById('pen-tool'),
+            rectangleToolBtn: document.getElementById('rectangle-tool'),
+            eraserToolBtn: document.getElementById('eraser-tool'),
+            colorPicker: document.getElementById('color-picker'),
+            sizeSlider: document.getElementById('size-slider'),
+            undoBtn: document.getElementById('undo-btn'),
+            clearBtn: document.getElementById('clear-btn')
+        };
+
+        // Annotation variables
+        let isDrawing = false;
+        let lastX = 0;
+        let lastY = 0;
+        let currentAnnotation = null;
+        let textInput = null;
+
+        // Initialize the app
+        function init() {
+            setupEventListeners();
+            renderPage();
+        }
+
+        // Set up event listeners
+        function setupEventListeners() {
+            // PDF controls
+            elements.openPdfBtn.addEventListener('click', () => elements.pdfUpload.click());
+            elements.pdfUpload.addEventListener('change', handleFileSelect);
+            elements.savePdfBtn.addEventListener('click', savePdf);
+            elements.prevPageBtn.addEventListener('click', prevPage);
+            elements.nextPageBtn.addEventListener('click', nextPage);
+            elements.goToPageBtn.addEventListener('click', goToPage);
+            elements.zoomOutBtn.addEventListener('click', zoomOut);
+            elements.zoomInBtn.addEventListener('click', zoomIn);
+            
+            // Tool controls
+            elements.textToolBtn.addEventListener('click', () => setTool('text'));
+            elements.highlightToolBtn.addEventListener('click', () => setTool('highlight'));
+            elements.penToolBtn.addEventListener('click', () => setTool('pen'));
+            elements.rectangleToolBtn.addEventListener('click', () => setTool('rectangle'));
+            elements.eraserToolBtn.addEventListener('click', () => setTool('eraser'));
+            elements.colorPicker.addEventListener('input', (e) => {
+                state.color = e.target.value;
+            });
+            elements.sizeSlider.addEventListener('input', (e) => {
+                state.size = parseInt(e.target.value);
+            });
+            elements.undoBtn.addEventListener('click', undo);
+            elements.clearBtn.addEventListener('click', clearPage);
+            
+            // Annotation canvas events
+            const annotationCtx = elements.annotationCanvas.getContext('2d');
+            
+            elements.annotationCanvas.addEventListener('mousedown', startDrawing);
+            elements.annotationCanvas.addEventListener('mousemove', draw);
+            elements.annotationCanvas.addEventListener('mouseup', endDrawing);
+            elements.annotationCanvas.addEventListener('mouseout', endDrawing);
+            
+            // Touch events for mobile
+            elements.annotationCanvas.addEventListener('touchstart', handleTouchStart);
+            elements.annotationCanvas.addEventListener('touchmove', handleTouchMove);
+            elements.annotationCanvas.addEventListener('touchend', handleTouchEnd);
+        }
+
+        // Handle PDF file selection
+        async function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                const loadingTask = pdfjsLib.getDocument(arrayBuffer);
+                state.pdf = await loadingTask.promise;
+                
+                // Reset state
+                state.currentPage = 1;
+                state.zoom = 1;
+                state.annotations = {};
+                state.undoStack = [];
+                state.redoStack = [];
+                
+                // Update UI
+                elements.pageCount.textContent = `of ${state.pdf.numPages}`;
+                elements.pageJump.max = state.pdf.numPages;
+                updatePageThumbnails();
+                renderPage();
+            } catch (error) {
+                console.error('Error loading PDF:', error);
+                alert('Error loading PDF. Please try another file.');
+            }
+        }
+
+        // Render the current PDF page
+        async function renderPage() {
+            if (!state.pdf) return;
+            
+            try {
+                const page = await state.pdf.getPage(state.currentPage);
+                const viewport = page.getViewport({ scale: state.zoom });
+                
+                // Set canvas dimensions
+                elements.pdfCanvas.height = viewport.height;
+                elements.pdfCanvas.width = viewport.width;
+                elements.annotationCanvas.height = viewport.height;
+                elements.annotationCanvas.width = viewport.width;
+                
+                // Render PDF page
+                const pdfCtx = elements.pdfCanvas.getContext('2d');
+                const renderContext = {
+                    canvasContext: pdfCtx,
+                    viewport: viewport
+                };
+                
+                await page.render(renderContext).promise;
+                
+                // Update UI
+                elements.pageNum.textContent = `Page: ${state.currentPage}`;
+                elements.pageJump.value = state.currentPage;
+                elements.zoomLevel.textContent = `${Math.round(state.zoom * 100)}%`;
+                
+                // Render annotations
+                renderAnnotations();
+            } catch (error) {
+                console.error('Error rendering page:', error);
+            }
+        }
+
+        // Update page thumbnails
+        async function updatePageThumbnails() {
+            if (!state.pdf) return;
+            
+            elements.pageThumbnails.innerHTML = '';
+            
+            for (let i = 1; i <= state.pdf.numPages; i++) {
+                const thumbnail = document.createElement('div');
+                thumbnail.className = 'page-thumbnail';
+                if (i === state.currentPage) {
+                    thumbnail.classList.add('active');
+                }
+                
+                const canvas = document.createElement('canvas');
+                thumbnail.appendChild(canvas);
+                elements.pageThumbnails.appendChild(thumbnail);
+                
+                // Render thumbnail
+                try {
+                    const page = await state.pdf.getPage(i);
+                    const viewport = page.getViewport({ scale: 0.2 });
+                    canvas.height = viewport.height;
+                    canvas.width = viewport.width;
+                    
+                    const ctx = canvas.getContext('2d');
+                    await page.render({
+                        canvasContext: ctx,
+                        viewport: viewport
+                    }).promise;
+                    
+                    // Add click event
+                    thumbnail.addEventListener('click', () => {
+                        state.currentPage = i;
+                        renderPage();
+                        updateActiveThumbnail();
+                    });
+                } catch (error) {
+                    console.error(`Error rendering thumbnail for page ${i}:`, error);
+                }
+            }
+        }
+
+        // Update active thumbnail
+        function updateActiveThumbnail() {
+            const thumbnails = document.querySelectorAll('.page-thumbnail');
+            thumbnails.forEach((thumb, index) => {
+                if (index + 1 === state.currentPage) {
+                    thumb.classList.add('active');
+                } else {
+                    thumb.classList.remove('active');
+                }
+            });
+        }
+
+        // Navigation functions
+        function prevPage() {
+            if (state.currentPage > 1) {
+                state.currentPage--;
+                renderPage();
+                updateActiveThumbnail();
+            }
+        }
+
+        function nextPage() {
+            if (state.pdf && state.currentPage < state.pdf.numPages) {
+                state.currentPage++;
+                renderPage();
+                updateActiveThumbnail();
+            }
+        }
+
+        function goToPage() {
+            const pageNum = parseInt(elements.pageJump.value);
+            if (pageNum >= 1 && pageNum <= state.pdf.numPages) {
+                state.currentPage = pageNum;
+                renderPage();
+                updateActiveThumbnail();
+            }
+        }
+
+        // Zoom functions
+        function zoomOut() {
+            if (state.zoom > 0.5) {
+                state.zoom -= 0.1;
+                renderPage();
+            }
+        }
+
+        function zoomIn() {
+            if (state.zoom < 2) {
+                state.zoom += 0.1;
+                renderPage();
+            }
+        }
+
+        // Tool functions
+        function setTool(tool) {
+            state.tool = tool;
+            
+            // Update active tool button
+            document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
+            
+            switch (tool) {
+                case 'text':
+                    elements.textToolBtn.classList.add('active');
+                    elements.annotationCanvas.style.cursor = 'text';
+                    break;
+                case 'highlight':
+                    elements.highlightToolBtn.classList.add('active');
+                    elements.annotationCanvas.style.cursor = 'crosshair';
+                    break;
+                case 'pen':
+                    elements.penToolBtn.classList.add('active');
+                    elements.annotationCanvas.style.cursor = 'crosshair';
+                    break;
+                case 'rectangle':
+                    elements.rectangleToolBtn.classList.add('active');
+                    elements.annotationCanvas.style.cursor = 'crosshair';
+                    break;
+                case 'eraser':
+                    elements.eraserToolBtn.classList.add('active');
+                    elements.annotationCanvas.style.cursor = 'cell';
+                    break;
+            }
+        }
+
+        // Annotation functions
+        function startDrawing(e) {
+            if (!state.pdf) return;
+            
+            isDrawing = true;
+            const rect = elements.annotationCanvas.getBoundingClientRect();
+            lastX = e.clientX - rect.left;
+            lastY = e.clientY - rect.top;
+            
+            // Create a new annotation
+            currentAnnotation = {
+                type: state.tool,
+                color: state.tool === 'highlight' ? state.color + '80' : state.color,
+                size: state.size,
+                points: [[lastX, lastY]],
+                text: '',
+                rect: [lastX, lastY, 0, 0]
+            };
+            
+            // For text tool, create an input element
+            if (state.tool === 'text') {
+                createTextInput(lastX, lastY);
+            }
+        }
+
+        function draw(e) {
+            if (!isDrawing || !currentAnnotation || state.tool === 'text') return;
+            
+            const rect = elements.annotationCanvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            // Update current annotation
+            if (state.tool === 'pen') {
+                currentAnnotation.points.push([x, y]);
+            } else if (state.tool === 'rectangle') {
+                currentAnnotation.rect = [
+                    Math.min(lastX, x),
+                    Math.min(lastY, y),
+                    Math.abs(x - lastX),
+                    Math.abs(y - lastY)
+                ];
+            } else if (state.tool === 'highlight') {
+                currentAnnotation.points.push([x, y]);
+            }
+            
+            // Redraw annotations
+            renderAnnotations();
+            
+            // Draw temporary annotation
+            const ctx = elements.annotationCanvas.getContext('2d');
+            ctx.clearRect(0, 0, elements.annotationCanvas.width, elements.annotationCanvas.height);
+            renderAnnotations();
+            
+            if (state.tool === 'pen' || state.tool === 'highlight') {
+                drawFreehand(ctx, currentAnnotation);
+            } else if (state.tool === 'rectangle') {
+                drawRectangle(ctx, currentAnnotation);
+            }
+        }
+
+        function endDrawing() {
+            if (!isDrawing) return;
+            
+            isDrawing = false;
+            
+            if (currentAnnotation) {
+                // Save to annotations
+                if (!state.annotations[state.currentPage]) {
+                    state.annotations[state.currentPage] = [];
+                }
+                
+                // Only save if it's a meaningful annotation
+                if (state.tool !== 'text' || (state.tool === 'text' && currentAnnotation.text.trim() !== '')) {
+                    state.annotations[state.currentPage].push(currentAnnotation);
+                    pushToUndoStack();
+                }
+                
+                currentAnnotation = null;
+            }
+            
+            // Redraw annotations
+            renderAnnotations();
+        }
+
+        function createTextInput(x, y) {
+            // Remove existing text input if any
+            if (textInput) {
+                textInput.remove();
+            }
+            
+            textInput = document.createElement('div');
+            textInput.contentEditable = true;
+            textInput.style.position = 'absolute';
+            textInput.style.left = `${x}px`;
+            textInput.style.top = `${y}px`;
+            textInput.style.minWidth = '100px';
+            textInput.style.minHeight = '20px';
+            textInput.style.padding = '2px';
+            textInput.style.border = '1px dashed #333';
+            textInput.style.backgroundColor = 'white';
+            textInput.style.outline = 'none';
+            textInput.style.fontFamily = 'Arial, sans-serif';
+            textInput.style.fontSize = `${state.size * 4}px`;
+            textInput.style.color = state.color;
+            textInput.style.zIndex = '1000';
+            
+            textInput.addEventListener('blur', () => {
+                currentAnnotation.text = textInput.textContent;
+                currentAnnotation.rect = [
+                    parseInt(textInput.style.left),
+                    parseInt(textInput.style.top),
+                    textInput.offsetWidth,
+                    textInput.offsetHeight
+                ];
+                currentAnnotation.fontSize = state.size * 4;
+                endDrawing();
+            });
+            
+            textInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    textInput.blur();
+                }
+            });
+            
+            elements.pdfViewer.appendChild(textInput);
+            textInput.focus();
+        }
+
+        function renderAnnotations() {
+            const ctx = elements.annotationCanvas.getContext('2d');
+            ctx.clearRect(0, 0, elements.annotationCanvas.width, elements.annotationCanvas.height);
+            
+            if (!state.annotations[state.currentPage]) return;
+            
+            state.annotations[state.currentPage].forEach(annotation => {
+                switch (annotation.type) {
+                    case 'pen':
+                    case 'highlight':
+                        drawFreehand(ctx, annotation);
+                        break;
+                    case 'rectangle':
+                        drawRectangle(ctx, annotation);
+                        break;
+                    case 'text':
+                        drawText(ctx, annotation);
+                        break;
+                }
+            });
+        }
+
+        function drawFreehand(ctx, annotation) {
+            ctx.beginPath();
+            ctx.moveTo(annotation.points[0][0], annotation.points[0][1]);
+            
+            for (let i = 1; i < annotation.points.length; i++) {
+                ctx.lineTo(annotation.points[i][0], annotation.points[i][1]);
+            }
+            
+            ctx.strokeStyle = annotation.color;
+            ctx.lineWidth = annotation.size;
+            ctx.lineJoin = 'round';
+            ctx.lineCap = 'round';
+            
+            if (annotation.type === 'highlight') {
+                ctx.globalAlpha = 0.5;
+                ctx.stroke();
+                ctx.globalAlpha = 1.0;
+            } else {
+                ctx.stroke();
+            }
+        }
+
+        function drawRectangle(ctx, annotation) {
+            ctx.beginPath();
+            ctx.rect(...annotation.rect);
+            ctx.strokeStyle = annotation.color;
+            ctx.lineWidth = annotation.size;
+            ctx.stroke();
+        }
+
+        function drawText(ctx, annotation) {
+            ctx.font = `${annotation.fontSize}px Arial`;
+            ctx.fillStyle = annotation.color;
+            ctx.fillText(annotation.text, annotation.rect[0], annotation.rect[1] + annotation.fontSize);
+        }
+
+        // Undo/Redo functions
+        function pushToUndoStack() {
+            // Clone the current state
+            const stateClone = JSON.parse(JSON.stringify({
+                currentPage: state.currentPage,
+                annotations: {...state.annotations}
+            }));
+            
+            state.undoStack.push(stateClone);
+            state.redoStack = []; // Clear redo stack when new action is performed
+        }
+
+        function undo() {
+            if (state.undoStack.length === 0) return;
+            
+            // Push current state to redo stack
+            const currentState = JSON.parse(JSON.stringify({
+                currentPage: state.currentPage,
+                annotations: {...state.annotations}
+            }));
+            state.redoStack.push(currentState);
+            
+            // Restore previous state
+            const prevState = state.undoStack.pop();
+            state.currentPage = prevState.currentPage;
+            state.annotations = {...prevState.annotations};
+            
+            renderPage();
+            updateActiveThumbnail();
+        }
+
+        // Clear current page annotations
+        function clearPage() {
+            if (!state.annotations[state.currentPage] || state.annotations[state.currentPage].length === 0) return;
+            
+            pushToUndoStack();
+            state.annotations[state.currentPage] = [];
+            renderAnnotations();
+        }
+
+        // Save PDF with annotations
+        async function savePdf() {
+            if (!state.pdf) {
+                alert('No PDF loaded.');
+                return;
+            }
+            
+            alert('Note: Full PDF saving with annotations would require PDF-lib library. This demo shows the UI but actual PDF modification is not implemented.');
+            
+            // In a real implementation, you would:
+            // 1. Load PDF-lib (https://pdf-lib.js.org/)
+            // 2. Modify the PDF with annotations
+            // 3. Save the modified PDF
+            
+            // For now, we'll just show a message
+            console.log('PDF saving functionality would be implemented here with PDF-lib');
+        }
+
+        // Touch event handlers
+        function handleTouchStart(e) {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const mouseEvent = new MouseEvent('mousedown', {
+                clientX: touch.clientX,
+                clientY: touch.clientY
+            });
+            elements.annotationCanvas.dispatchEvent(mouseEvent);
+        }
+
+        function handleTouchMove(e) {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const mouseEvent = new MouseEvent('mousemove', {
+                clientX: touch.clientX,
+                clientY: touch.clientY
+            });
+            elements.annotationCanvas.dispatchEvent(mouseEvent);
+        }
+
+        function handleTouchEnd(e) {
+            e.preventDefault();
+            const mouseEvent = new MouseEvent('mouseup');
+            elements.annotationCanvas.dispatchEvent(mouseEvent);
+        }
+
+        // Initialize the app
+        init();
+    </script>
+</body>
+</html>
